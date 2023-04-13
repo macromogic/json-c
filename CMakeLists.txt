@@ -10,7 +10,7 @@ cmake_policy(SET CMP0048 NEW)
 
 # JSON-C library is C only project.
 # PROJECT_VERSION{,_MAJOR,_MINOR,_PATCH} set by project():
-project(json-c LANGUAGES C VERSION 0.16.99)
+project(json-c LANGUAGES C CXX VERSION 0.16.99)
 
 # Targets may not link directly to themselves.
 cmake_policy(SET CMP0038 NEW)
@@ -289,6 +289,10 @@ message(STATUS "Wrote ${PROJECT_BINARY_DIR}/config.h")
 configure_file(${PROJECT_SOURCE_DIR}/cmake/json_config.h.in   ${PROJECT_BINARY_DIR}/json_config.h)
 message(STATUS "Wrote ${PROJECT_BINARY_DIR}/json_config.h")
 
+if (USE_SANDBOX)
+    set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -DSANDBOX")
+endif()
+
 if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections")
 	if ("${DISABLE_WERROR}" STREQUAL "OFF")
@@ -300,6 +304,7 @@ if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_C_COMPILER_ID}" STREQUAL
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wextra")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wwrite-strings")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wno-unused-parameter")
+    set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=c++11")
     if (NOT WIN32)
         set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wstrict-prototypes")
     endif()
@@ -402,6 +407,7 @@ set(JSON_C_HEADERS
     ${PROJECT_SOURCE_DIR}/snprintf_compat.h
     ${PROJECT_SOURCE_DIR}/strdup_compat.h
     ${PROJECT_SOURCE_DIR}/vasprintf_compat.h
+    ${PROJECT_SOURCE_DIR}/sandbox.h
 )
 
 set(JSON_C_SOURCES
@@ -417,6 +423,7 @@ set(JSON_C_SOURCES
     ${PROJECT_SOURCE_DIR}/printbuf.c
     ${PROJECT_SOURCE_DIR}/random_seed.c
     ${PROJECT_SOURCE_DIR}/strerror_override.c
+    ${PROJECT_SOURCE_DIR}/sandbox.cpp
 )
 
 if (NOT DISABLE_JSON_POINTER)
@@ -426,6 +433,8 @@ if (NOT DISABLE_JSON_POINTER)
 else()
     set(JSON_H_JSON_POINTER "")
 endif()
+
+message(${JSON_C_SOURCES})
 
 configure_file(json.h.cmakein ${PROJECT_BINARY_DIR}/json.h @ONLY)
 
