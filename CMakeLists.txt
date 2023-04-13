@@ -293,6 +293,8 @@ if (USE_SANDBOX)
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -DSANDBOX")
 endif()
 
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=c++11")
+
 if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections")
 	if ("${DISABLE_WERROR}" STREQUAL "OFF")
@@ -304,7 +306,6 @@ if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_C_COMPILER_ID}" STREQUAL
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wextra")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wwrite-strings")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wno-unused-parameter")
-    set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=c++11")
     if (NOT WIN32)
         set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wstrict-prototypes")
     endif()
@@ -433,8 +434,6 @@ if (NOT DISABLE_JSON_POINTER)
 else()
     set(JSON_H_JSON_POINTER "")
 endif()
-
-message(${JSON_C_SOURCES})
 
 configure_file(json.h.cmakein ${PROJECT_BINARY_DIR}/json.h @ONLY)
 
