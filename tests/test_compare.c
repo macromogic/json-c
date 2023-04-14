@@ -6,6 +6,7 @@
 #undef NDEBUG
 #endif
 #include "config.h"
+#include "sandbox.h"
 #include <stdio.h>
 #include <string.h>
 

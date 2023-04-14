@@ -15,6 +15,7 @@
 
 #include "config.h"
 
+#include "sandbox.h"
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
@@ -38,16 +39,23 @@ struct printbuf *printbuf_new(void)
 {
 	struct printbuf *p;
 
+	sandbox_check_access(&(p));
 	p = (struct printbuf *)calloc(1, sizeof(struct printbuf));
+	sandbox_register_var(printbuf_new, p, p,
+			     (1) * (sizeof(struct printbuf)));
 	if (!p)
 		return NULL;
+	sandbox_check_access(&(p->size));
 	p->size = 32;
+	sandbox_check_access(&(p->bpos));
 	p->bpos = 0;
 	if (!(p->buf = (char *)malloc(p->size)))
 	{
+		sandbox_unregister_var(p);
 		free(p);
 		return NULL;
 	}
+	sandbox_check_access(&(p->buf[0]));
 	p->buf[0] = '\0';
 	return p;
 }
@@ -72,15 +80,21 @@ static int printbuf_extend(struct printbuf *p, int min_size)
 	/* Prevent signed integer overflows with large buffers. */
 	if (min_size > INT_MAX - 8)
 	{
+		sandbox_check_access(&(errno));
 		errno = EFBIG;
 		return -1;
 	}
-	if (p->size > INT_MAX / 2)
+	if (p->size > INT_MAX / 2) {
+		sandbox_check_access(&(new_size));
 		new_size = min_size + 8;
+	}
 	else {
+		sandbox_check_access(&(new_size));
 		new_size = p->size * 2;
-		if (new_size < min_size + 8)
+		if (new_size < min_size + 8) {
+			sandbox_check_access(&(new_size));
 			new_size = min_size + 8;
+		}
 	}
 #ifdef PRINTBUF_DEBUG
 	MC_DEBUG("printbuf_extend: realloc "
@@ -89,7 +103,9 @@ static int printbuf_extend(struct printbuf *p, int min_size)
 #endif /* PRINTBUF_DEBUG */
 	if (!(t = (char *)realloc(p->buf, new_size)))
 		return -1;
+	sandbox_check_access(&(p->size));
 	p->size = new_size;
+	sandbox_check_access(&(p->buf));
 	p->buf = t;
 	return 0;
 }
@@ -99,6 +115,7 @@ int printbuf_memappend(struct printbuf *p, const char *buf, int size)
 	/* Prevent signed integer overflows with large buffers. */
 	if (size < 0 || size > INT_MAX - p->bpos - 1)
 	{
+		sandbox_check_access(&(errno));
 		errno = EFBIG;
 		return -1;
 	}
@@ -107,8 +124,11 @@ int printbuf_memappend(struct printbuf *p, const char *buf, int size)
 		if (printbuf_extend(p, p->bpos + size + 1) < 0)
 			return -1;
 	}
+	sandbox_check_access_n(&(p->buf + p->bpos), size);
 	memcpy(p->buf + p->bpos, buf, size);
+	sandbox_check_access(&(p->bpos));
 	p->bpos += size;
+	sandbox_check_access(&(p->buf[p->bpos]));
 	p->buf[p->bpos] = '\0';
 	return size;
 }
@@ -117,14 +137,18 @@ int printbuf_memset(struct printbuf *pb, int offset, int charvalue, int len)
 {
 	int size_needed;
 
-	if (offset == -1)
+	if (offset == -1) {
+		sandbox_check_access(&(offset));
 		offset = pb->bpos;
+	}
 	/* Prevent signed integer overflows with large buffers. */
 	if (len < 0 || offset < -1 || len > INT_MAX - offset)
 	{
+		sandbox_check_access(&(errno));
 		errno = EFBIG;
 		return -1;
 	}
+	sandbox_check_access(&(size_needed));
 	size_needed = offset + len;
 	if (pb->size < size_needed)
 	{
@@ -132,11 +156,17 @@ int printbuf_memset(struct printbuf *pb, int offset, int charvalue, int len)
 			return -1;
 	}
 
-	if (pb->bpos < offset)
+	if (pb->bpos < offset) {
+		sandbox_check_access_n(&(pb->buf + pb->bpos),
+				       offset - pb->bpos);
 		memset(pb->buf + pb->bpos, '\0', offset - pb->bpos);
+	}
+	sandbox_check_access_n(&(pb->buf + offset), len);
 	memset(pb->buf + offset, charvalue, len);
-	if (pb->bpos < size_needed)
+	if (pb->bpos < size_needed) {
+		sandbox_check_access(&(pb->bpos));
 		pb->bpos = size_needed;
+	}
 
 	return 0;
 }
@@ -150,6 +180,7 @@ int sprintbuf(struct printbuf *p, const char *msg, ...)
 
 	/* use stack buffer first */
 	va_start(ap, msg);
+	sandbox_check_access(&(size));
 	size = vsnprintf(buf, 128, msg, ap);
 	va_end(ap);
 	/* if string is greater than stack buffer, then use dynamic string
@@ -166,11 +197,14 @@ int sprintbuf(struct printbuf *p, const char *msg, ...)
 			return -1;
 		}
 		va_end(ap);
+		sandbox_check_access(&(size));
 		size = printbuf_memappend(p, t, size);
+		sandbox_unregister_var(t);
 		free(t);
 	}
 	else
 	{
+		sandbox_check_access(&(size));
 		size = printbuf_memappend(p, buf, size);
 	}
 	return size;
@@ -178,7 +212,9 @@ int sprintbuf(struct printbuf *p, const char *msg, ...)
 
 void printbuf_reset(struct printbuf *p)
 {
+	sandbox_check_access(&(p->buf[0]));
 	p->buf[0] = '\0';
+	sandbox_check_access(&(p->bpos));
 	p->bpos = 0;
 }
 
@@ -186,7 +222,9 @@ void printbuf_free(struct printbuf *p)
 {
 	if (p)
 	{
+		sandbox_unregister_var(p->buf);
 		free(p->buf);
+		sandbox_unregister_var(p);
 		free(p);
 	}
 }

@@ -10,6 +10,7 @@
 
 #include "strerror_override.h"
 
+#include "sandbox.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,9 +35,12 @@ static void string_replace_all_occurrences_with_char(char *s, const char *occur,
 	char *p = s;
 	while ((p = strstr(p, occur)))
 	{
+		sandbox_check_access(&(*p));
 		*p = repl_char;
 		p++;
+		sandbox_check_access(&(slen));
 		slen -= skip;
+		sandbox_check_access_n(&(p), slen - (p - s) + 1);
 		memmove(p, (p + skip), slen - (p - s) + 1); /* includes null char too */
 	}
 }
@@ -52,15 +56,18 @@ static int is_valid_index(struct json_object *jo, const char *path, size_t *idx)
 	{
 		if (is_plain_digit(path[0]))
 		{
+			sandbox_check_access(&(*idx));
 			*idx = (path[0] - '0');
 			goto check_oob;
 		}
+		sandbox_check_access(&(errno));
 		errno = EINVAL;
 		return 0;
 	}
 	/* leading zeros not allowed per RFC */
 	if (path[0] == '0')
 	{
+		sandbox_check_access(&(errno));
 		errno = EINVAL;
 		return 0;
 	}
@@ -69,23 +76,29 @@ static int is_valid_index(struct json_object *jo, const char *path, size_t *idx)
 	{
 		if (!is_plain_digit(path[i]))
 		{
+			sandbox_check_access(&(errno));
 			errno = EINVAL;
 			return 0;
 		}
 	}
 
+	sandbox_check_access(&(idx_val));
 	idx_val = strtol(path, NULL, 10);
 	if (idx_val < 0)
 	{
+		sandbox_check_access(&(errno));
 		errno = EINVAL;
 		return 0;
 	}
+	sandbox_check_access(&(*idx));
 	*idx = idx_val;
 
 check_oob:
+	sandbox_check_access(&(len));
 	len = json_object_array_length(jo);
 	if (*idx >= len)
 	{
+		sandbox_check_access(&(errno));
 		errno = ENOENT;
 		return 0;
 	}
@@ -101,14 +114,18 @@ static int json_pointer_get_single_path(struct json_object *obj, char *path,
 		size_t idx;
 		if (!is_valid_index(obj, path, &idx))
 			return -1;
+		sandbox_check_access(&(obj));
 		obj = json_object_array_get_idx(obj, idx);
 		if (obj)
 		{
-			if (value)
+			if (value) {
+				sandbox_check_access(&(*value));
 				*value = obj;
+			}
 			return 0;
 		}
 		/* Entry not found */
+		sandbox_check_access(&(errno));
 		errno = ENOENT;
 		return -1;
 	}
@@ -119,6 +136,7 @@ static int json_pointer_get_single_path(struct json_object *obj, char *path,
 
 	if (!json_object_object_get_ex(obj, path, value))
 	{
+		sandbox_check_access(&(errno));
 		errno = ENOENT;
 		return -1;
 	}
@@ -149,6 +167,7 @@ static int json_pointer_set_single_path(struct json_object *parent, const char *
 	/* Getting here means that we tried to "dereference" a primitive JSON type
 	 * (like string, int, bool).i.e. add a sub-object to it
 	 */
+	sandbox_check_access(&(errno));
 	errno = ENOENT;
 	return -1;
 }
@@ -162,14 +181,18 @@ static int json_pointer_get_recursive(struct json_object *obj, char *path,
 	/* All paths (on each recursion level must have a leading '/' */
 	if (path[0] != '/')
 	{
+		sandbox_check_access(&(errno));
 		errno = EINVAL;
 		return -1;
 	}
 	path++;
 
+	sandbox_check_access(&(endp));
 	endp = strchr(path, '/');
-	if (endp)
+	if (endp) {
+		sandbox_check_access(&(*endp));
 		*endp = '\0';
+	}
 
 	/* If we err-ed here, return here */
 	if ((rc = json_pointer_get_single_path(obj, path, &obj)))
@@ -178,13 +201,16 @@ static int json_pointer_get_recursive(struct json_object *obj, char *path,
 	if (endp)
 	{
 		/* Put the slash back, so that the sanity check passes on next recursion level */
+		sandbox_check_access(&(*endp));
 		*endp = '/';
 		return json_pointer_get_recursive(obj, endp, value);
 	}
 
 	/* We should be at the end of the recursion here */
-	if (value)
+	if (value) {
+		sandbox_check_access(&(*value));
 		*value = obj;
+	}
 
 	return 0;
 }
@@ -196,24 +222,30 @@ int json_pointer_get(struct json_object *obj, const char *path, struct json_obje
 
 	if (!obj || !path)
 	{
+		sandbox_check_access(&(errno));
 		errno = EINVAL;
 		return -1;
 	}
 
 	if (path[0] == '\0')
 	{
-		if (res)
+		if (res) {
+			sandbox_check_access(&(*res));
 			*res = obj;
+		}
 		return 0;
 	}
 
 	/* pass a working copy to the recursive call */
 	if (!(path_copy = strdup(path)))
 	{
+		sandbox_check_access(&(errno));
 		errno = ENOMEM;
 		return -1;
 	}
+	sandbox_check_access(&(rc));
 	rc = json_pointer_get_recursive(obj, path_copy, res);
+	sandbox_unregister_var(path_copy);
 	free(path_copy);
 
 	return rc;
@@ -227,11 +259,13 @@ int json_pointer_getf(struct json_object *obj, struct json_object **res, const c
 
 	if (!obj || !path_fmt)
 	{
+		sandbox_check_access(&(errno));
 		errno = EINVAL;
 		return -1;
 	}
 
 	va_start(args, path_fmt);
+	sandbox_check_access(&(rc));
 	rc = vasprintf(&path_copy, path_fmt, args);
 	va_end(args);
 
@@ -240,13 +274,17 @@ int json_pointer_getf(struct json_object *obj, struct json_object **res, const c
 
 	if (path_copy[0] == '\0')
 	{
-		if (res)
+		if (res) {
+			sandbox_check_access(&(*res));
 			*res = obj;
+		}
 		goto out;
 	}
 
+	sandbox_check_access(&(rc));
 	rc = json_pointer_get_recursive(obj, path_copy, res);
 out:
+	sandbox_unregister_var(path_copy);
 	free(path_copy);
 
 	return rc;
@@ -261,6 +299,7 @@ int json_pointer_set(struct json_object **obj, const char *path, struct json_obj
 
 	if (!obj || !path)
 	{
+		sandbox_check_access(&(errno));
 		errno = EINVAL;
 		return -1;
 	}
@@ -268,12 +307,14 @@ int json_pointer_set(struct json_object **obj, const char *path, struct json_obj
 	if (path[0] == '\0')
 	{
 		json_object_put(*obj);
+		sandbox_check_access(&(*obj));
 		*obj = value;
 		return 0;
 	}
 
 	if (path[0] != '/')
 	{
+		sandbox_check_access(&(errno));
 		errno = EINVAL;
 		return -1;
 	}
@@ -288,11 +329,15 @@ int json_pointer_set(struct json_object **obj, const char *path, struct json_obj
 	/* pass a working copy to the recursive call */
 	if (!(path_copy = strdup(path)))
 	{
+		sandbox_check_access(&(errno));
 		errno = ENOMEM;
 		return -1;
 	}
+	sandbox_check_access(&(path_copy[endp - path]));
 	path_copy[endp - path] = '\0';
+	sandbox_check_access(&(rc));
 	rc = json_pointer_get_recursive(*obj, path_copy, &set);
+	sandbox_unregister_var(path_copy);
 	free(path_copy);
 
 	if (rc)
@@ -313,12 +358,14 @@ int json_pointer_setf(struct json_object **obj, struct json_object *value, const
 
 	if (!obj || !path_fmt)
 	{
+		sandbox_check_access(&(errno));
 		errno = EINVAL;
 		return -1;
 	}
 
 	/* pass a working copy to the recursive call */
 	va_start(args, path_fmt);
+	sandbox_check_access(&(rc));
 	rc = vasprintf(&path_copy, path_fmt, args);
 	va_end(args);
 
@@ -328,13 +375,16 @@ int json_pointer_setf(struct json_object **obj, struct json_object *value, const
 	if (path_copy[0] == '\0')
 	{
 		json_object_put(*obj);
+		sandbox_check_access(&(*obj));
 		*obj = value;
 		goto out;
 	}
 
 	if (path_copy[0] != '/')
 	{
+		sandbox_check_access(&(errno));
 		errno = EINVAL;
+		sandbox_check_access(&(rc));
 		rc = -1;
 		goto out;
 	}
@@ -342,11 +392,14 @@ int json_pointer_setf(struct json_object **obj, struct json_object *value, const
 	/* If there's only 1 level to set, stop here */
 	if ((endp = strrchr(path_copy, '/')) == path_copy)
 	{
+		sandbox_check_access(&(set));
 		set = *obj;
 		goto set_single_path;
 	}
 
+	sandbox_check_access(&(*endp));
 	*endp = '\0';
+	sandbox_check_access(&(rc));
 	rc = json_pointer_get_recursive(*obj, path_copy, &set);
 
 	if (rc)
@@ -354,8 +407,10 @@ int json_pointer_setf(struct json_object **obj, struct json_object *value, const
 
 set_single_path:
 	endp++;
+	sandbox_check_access(&(rc));
 	rc = json_pointer_set_single_path(set, endp, value);
 out:
+	sandbox_unregister_var(path_copy);
 	free(path_copy);
 	return rc;
 }

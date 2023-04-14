@@ -2,6 +2,7 @@
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
+#include "sandbox.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -49,79 +50,104 @@ int main(int argc, char **argv)
 
 	checkit("1");
 
+	sandbox_check_access_n(&(buf), "2147483647");
 	strcpy(buf, "2147483647"); // aka INT32_MAX
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "-1");
 	strcpy(buf, "-1");
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "   -1");
 	strcpy(buf, "   -1");
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "00001234");
 	strcpy(buf, "00001234");
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "0001234x");
 	strcpy(buf, "0001234x");
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "-00001234");
 	strcpy(buf, "-00001234");
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "-00001234x");
 	strcpy(buf, "-00001234x");
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "4294967295");
 	strcpy(buf, "4294967295"); // aka UINT32_MAX
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "4294967296");
 	strcpy(buf, "4294967296"); // aka UINT32_MAX + 1
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "21474836470");
 	strcpy(buf, "21474836470"); // INT32_MAX * 10
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "31474836470");
 	strcpy(buf, "31474836470"); // INT32_MAX * 10 + a bunch
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "-2147483647");
 	strcpy(buf, "-2147483647"); // INT32_MIN + 1
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "-2147483648");
 	strcpy(buf, "-2147483648"); // INT32_MIN
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "-2147483649");
 	strcpy(buf, "-2147483649"); // INT32_MIN - 1
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "-21474836480");
 	strcpy(buf, "-21474836480"); // INT32_MIN * 10
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "9223372036854775806");
 	strcpy(buf, "9223372036854775806"); // INT64_MAX - 1
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "9223372036854775807");
 	strcpy(buf, "9223372036854775807"); // INT64_MAX
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "9223372036854775808");
 	strcpy(buf, "9223372036854775808"); // INT64_MAX + 1
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "-9223372036854775808");
 	strcpy(buf, "-9223372036854775808"); // INT64_MIN
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "-9223372036854775809");
 	strcpy(buf, "-9223372036854775809"); // INT64_MIN - 1
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "18446744073709551614");
 	strcpy(buf, "18446744073709551614"); // UINT64_MAX - 1
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "18446744073709551615");
 	strcpy(buf, "18446744073709551615"); // UINT64_MAX
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "18446744073709551616");
 	strcpy(buf, "18446744073709551616"); // UINT64_MAX + 1
 	checkit(buf);
 
+	sandbox_check_access_n(&(buf), "-18446744073709551616");
 	strcpy(buf, "-18446744073709551616"); // -UINT64_MAX
 	checkit(buf);
 
 	// Ensure we can still parse valid numbers after parsing out of range ones.
+	sandbox_check_access_n(&(buf), "123");
 	strcpy(buf, "123");
 	checkit(buf);
 
@@ -136,55 +162,72 @@ int main(int argc, char **argv)
 
 	checkit_uint("1");
 
+	sandbox_check_access_n(&(buf), "2147483647");
 	strcpy(buf, "2147483647"); // aka INT32_MAX
 	checkit_uint(buf);
 
+	sandbox_check_access_n(&(buf), "-1");
 	strcpy(buf, "-1");
 	checkit_uint(buf);
 
+	sandbox_check_access_n(&(buf), "-9223372036854775808");
 	strcpy(buf, "-9223372036854775808");
 	checkit_uint(buf);
 
+	sandbox_check_access_n(&(buf), "   1");
 	strcpy(buf, "   1");
 	checkit_uint(buf);
 
+	sandbox_check_access_n(&(buf), "00001234");
 	strcpy(buf, "00001234");
 	checkit_uint(buf);
 
+	sandbox_check_access_n(&(buf), "0001234x");
 	strcpy(buf, "0001234x");
 	checkit_uint(buf);
 
+	sandbox_check_access_n(&(buf), "4294967295");
 	strcpy(buf, "4294967295"); // aka UINT32_MAX
 	checkit_uint(buf);
 
+	sandbox_check_access_n(&(buf), "4294967296");
 	strcpy(buf, "4294967296"); // aka UINT32_MAX + 1
 	checkit_uint(buf);
 
+	sandbox_check_access_n(&(buf), "21474836470");
 	strcpy(buf, "21474836470"); // INT32_MAX * 10
 	checkit_uint(buf);
 
+	sandbox_check_access_n(&(buf), "31474836470");
 	strcpy(buf, "31474836470"); // INT32_MAX * 10 + a bunch
 	checkit_uint(buf);
 
+	sandbox_check_access_n(&(buf), "9223372036854775806");
 	strcpy(buf, "9223372036854775806"); // INT64_MAX - 1
 	checkit_uint(buf);
 
+	sandbox_check_access_n(&(buf), "9223372036854775807");
 	strcpy(buf, "9223372036854775807"); // INT64_MAX
 	checkit_uint(buf);
 
+	sandbox_check_access_n(&(buf), "9223372036854775808");
 	strcpy(buf, "9223372036854775808"); // INT64_MAX + 1
 	checkit_uint(buf);
 
+	sandbox_check_access_n(&(buf), "18446744073709551614");
 	strcpy(buf, "18446744073709551614"); // UINT64_MAX - 1
 	checkit_uint(buf);
 
+	sandbox_check_access_n(&(buf), "18446744073709551615");
 	strcpy(buf, "18446744073709551615"); // UINT64_MAX
 	checkit_uint(buf);
 
+	sandbox_check_access_n(&(buf), "18446744073709551616");
 	strcpy(buf, "18446744073709551616"); // UINT64_MAX + 1
 	checkit_uint(buf);
 
 	// Ensure we can still parse valid numbers after parsing out of range ones.
+	sandbox_check_access_n(&(buf), "123");
 	strcpy(buf, "123");
 	checkit_uint(buf);
 

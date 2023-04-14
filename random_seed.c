@@ -12,6 +12,7 @@
 #include "random_seed.h"
 #include "config.h"
 #include "strerror_override.h"
+#include "sandbox.h"
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef HAVE_BSD_STDLIB_H
@@ -74,6 +75,7 @@ static int has_rdrand(void)
 	do_cpuid(regs, 1);
 	if (!(regs[2] & (1 << 30)))
 	{
+		sandbox_check_access(&(_has_rdrand));
 		_has_rdrand = 0;
 		return 0;
 	}
@@ -87,6 +89,7 @@ static int has_rdrand(void)
 	 * https://github.com/systemd/systemd/issues/11810
 	 * https://linuxreviews.org/RDRAND_stops_returning_random_values_on_older_AMD_CPUs_after_suspend
 	 */
+	sandbox_check_access(&(_has_rdrand));
 	_has_rdrand = 0;
 	int prev = get_rdrand_seed();
 	for (int i = 0; i < 3; i++)
@@ -94,10 +97,12 @@ static int has_rdrand(void)
 		int temp = get_rdrand_seed();
 		if (temp != prev)
 		{
+			sandbox_check_access(&(_has_rdrand));
 			_has_rdrand = 1;
 			break;
 		}
 
+		sandbox_check_access(&(prev));
 		prev = temp;
 	}
 
@@ -184,6 +189,7 @@ static int get_getrandom_seed(int *seed)
 
 	do
 	{
+		sandbox_check_access(&(ret));
 		ret = getrandom(seed, sizeof(*seed), GRND_NONBLOCK);
 	} while ((ret == -1) && (errno == EINTR));
 
@@ -277,8 +283,10 @@ static int get_cryptgenrandom_seed(int *seed)
 	DEBUG_SEED("get_cryptgenrandom_seed");
 
 	/* WinNT 4 and Win98 do no support CRYPT_SILENT */
-	if (LOBYTE(LOWORD(GetVersion())) > 4)
+	if (LOBYTE(LOWORD(GetVersion())) > 4) {
+		sandbox_check_access(&(dwFlags));
 		dwFlags |= CRYPT_SILENT;
+	}
 
 	if (!CryptAcquireContextA(&hProvider, 0, 0, PROV_RSA_FULL, dwFlags))
 	{

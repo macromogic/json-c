@@ -6,6 +6,7 @@
 #undef NDEBUG
 #endif
 #include "config.h"
+#include "sandbox.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -36,6 +37,7 @@ int main(void)
 		printf("parsed string:   ");
 		puts(json);
 		puts("FAIL");
+		sandbox_check_access(&(retval));
 		retval = 1;
 	}
 	json_object_put(string);

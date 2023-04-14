@@ -12,6 +12,7 @@
 
 #include "strerror_override.h"
 
+#include "sandbox.h"
 #include <assert.h>
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
@@ -183,6 +184,7 @@ static int json_escape_str(struct printbuf *pb, const char *str, size_t len, int
 	while (len)
 	{
 		--len;
+		sandbox_check_access(&(c));
 		c = str[pos];
 		switch (c)
 		{
@@ -220,6 +222,7 @@ static int json_escape_str(struct printbuf *pb, const char *str, size_t len, int
 			else if (c == '/')
 				printbuf_memappend(pb, "\\/", 2);
 
+			sandbox_check_access(&(start_offset));
 			start_offset = ++pos;
 			break;
 		default:
@@ -232,6 +235,7 @@ static int json_escape_str(struct printbuf *pb, const char *str, size_t len, int
 				snprintf(sbuf, sizeof(sbuf), "\\u00%c%c", json_hex_chars[c >> 4],
 				         json_hex_chars[c & 0xf]);
 				printbuf_memappend_fast(pb, sbuf, (int)sizeof(sbuf) - 1);
+				sandbox_check_access(&(start_offset));
 				start_offset = ++pos;
 			}
 			else
@@ -303,6 +307,7 @@ int json_object_put(struct json_object *jso)
 static void json_object_generic_delete(struct json_object *jso)
 {
 	printbuf_free(jso->_pb);
+	sandbox_unregister_var(jso);
 	free(jso);
 }
 
@@ -311,15 +316,23 @@ static inline struct json_object *json_object_new(enum json_type o_type, size_t 
 {
 	struct json_object *jso;
 
+	sandbox_check_access(&(jso));
 	jso = (struct json_object *)malloc(alloc_size);
+	sandbox_register_var(json_object_new, jso, jso, alloc_size);
 	if (!jso)
 		return NULL;
 
+	sandbox_check_access(&(jso->o_type));
 	jso->o_type = o_type;
+	sandbox_check_access(&(jso->_ref_count));
 	jso->_ref_count = 1;
+	sandbox_check_access(&(jso->_to_json_string));
 	jso->_to_json_string = to_json_string;
+	sandbox_check_access(&(jso->_pb));
 	jso->_pb = NULL;
+	sandbox_check_access(&(jso->_user_delete));
 	jso->_user_delete = NULL;
+	sandbox_check_access(&(jso->_userdata));
 	jso->_userdata = NULL;
 	//jso->...   // Type-specific fields must be set by caller
 
@@ -356,7 +369,9 @@ void json_object_set_userdata(json_object *jso, void *userdata, json_object_dele
 	if (jso->_user_delete)
 		jso->_user_delete(jso, jso->_userdata);
 
+	sandbox_check_access(&(jso->_userdata));
 	jso->_userdata = userdata;
+	sandbox_check_access(&(jso->_user_delete));
 	jso->_user_delete = user_delete;
 }
 
@@ -372,27 +387,35 @@ void json_object_set_serializer(json_object *jso, json_object_to_json_string_fn 
 		// Reset to the standard serialization function
 		switch (jso->o_type)
 		{
-		case json_type_null: jso->_to_json_string = NULL; break;
+		case json_type_null: sandbox_check_access(&(jso->_to_json_string));
+			jso->_to_json_string = NULL; break;
 		case json_type_boolean:
+			sandbox_check_access(&(jso->_to_json_string));
 			jso->_to_json_string = &json_object_boolean_to_json_string;
 			break;
 		case json_type_double:
+			sandbox_check_access(&(jso->_to_json_string));
 			jso->_to_json_string = &json_object_double_to_json_string_default;
 			break;
-		case json_type_int: jso->_to_json_string = &json_object_int_to_json_string; break;
+		case json_type_int: sandbox_check_access(&(jso->_to_json_string));
+			jso->_to_json_string = &json_object_int_to_json_string; break;
 		case json_type_object:
+			sandbox_check_access(&(jso->_to_json_string));
 			jso->_to_json_string = &json_object_object_to_json_string;
 			break;
 		case json_type_array:
+			sandbox_check_access(&(jso->_to_json_string));
 			jso->_to_json_string = &json_object_array_to_json_string;
 			break;
 		case json_type_string:
+			sandbox_check_access(&(jso->_to_json_string));
 			jso->_to_json_string = &json_object_string_to_json_string;
 			break;
 		}
 		return;
 	}
 
+	sandbox_check_access(&(jso->_to_json_string));
 	jso->_to_json_string = to_string_func;
 }
 
@@ -405,7 +428,9 @@ const char *json_object_to_json_string_length(struct json_object *jso, int flags
 
 	if (!jso)
 	{
+		sandbox_check_access(&(s));
 		s = 4;
+		sandbox_check_access(&(r));
 		r = "null";
 	}
 	else if ((jso->_pb) || (jso->_pb = printbuf_new()))
@@ -414,13 +439,17 @@ const char *json_object_to_json_string_length(struct json_object *jso, int flags
 
 		if (jso->_to_json_string(jso, jso->_pb, 0, flags) >= 0)
 		{
+			sandbox_check_access(&(s));
 			s = (size_t)jso->_pb->bpos;
+			sandbox_check_access(&(r));
 			r = jso->_pb->buf;
 		}
 	}
 
-	if (length)
+	if (length) {
+		sandbox_check_access(&(*length));
 		*length = s;
+	}
 	return r;
 }
 
@@ -442,10 +471,12 @@ static void indent(struct printbuf *pb, int level, int flags)
 	{
 		if (flags & JSON_C_TO_STRING_PRETTY_TAB)
 		{
+			sandbox_check_access_n(&(pb), level);
 			printbuf_memset(pb, -1, '\t', level);
 		}
 		else
 		{
+			sandbox_check_access_n(&(pb), level * 2);
 			printbuf_memset(pb, -1, ' ', level * 2);
 		}
 	}
@@ -468,6 +499,7 @@ static int json_object_object_to_json_string(struct json_object *jso, struct pri
 		}
 		if (flags & JSON_C_TO_STRING_PRETTY)
 			printbuf_strappend(pb, "\n");
+		sandbox_check_access(&(had_children));
 		had_children = 1;
 		if (flags & JSON_C_TO_STRING_SPACED && !(flags & JSON_C_TO_STRING_PRETTY))
 			printbuf_strappend(pb, " ");
@@ -496,8 +528,10 @@ static int json_object_object_to_json_string(struct json_object *jso, struct pri
 
 static void json_object_lh_entry_free(struct lh_entry *ent)
 {
-	if (!lh_entry_k_is_constant(ent))
+	if (!lh_entry_k_is_constant(ent)) {
+		sandbox_unregister_var(lh_entry_k(ent));
 		free(lh_entry_k(ent));
+	}
 	json_object_put((struct json_object *)lh_entry_v(ent));
 }
 
@@ -512,11 +546,13 @@ struct json_object *json_object_new_object(void)
 	struct json_object_object *jso = JSON_OBJECT_NEW(object);
 	if (!jso)
 		return NULL;
+	sandbox_check_access(&(jso->c_object));
 	jso->c_object =
 	    lh_kchar_table_new(JSON_OBJECT_DEF_HASH_ENTRIES, &json_object_lh_entry_free);
 	if (!jso->c_object)
 	{
 		json_object_generic_delete(&jso->base);
+		sandbox_check_access(&(errno));
 		errno = ENOMEM;
 		return NULL;
 	}
@@ -545,7 +581,9 @@ int json_object_object_add_ex(struct json_object *jso, const char *const key,
 
 	// We lookup the entry and replace the value, rather than just deleting
 	// and re-adding it, so the existing key remains valid.
+	sandbox_check_access(&(hash));
 	hash = lh_get_hash(JC_OBJECT(jso)->c_object, (const void *)key);
+	sandbox_check_access(&(existing_entry));
 	existing_entry =
 	    (opts & JSON_C_OBJECT_ADD_KEY_IS_NEW)
 	        ? NULL
@@ -564,6 +602,7 @@ int json_object_object_add_ex(struct json_object *jso, const char *const key,
 			return -1;
 		return lh_table_insert_w_hash(JC_OBJECT(jso)->c_object, k, val, hash, opts);
 	}
+	sandbox_check_access(&(existing_value));
 	existing_value = (json_object *)lh_entry_v(existing_entry);
 	if (existing_value)
 		json_object_put(existing_value);
@@ -597,8 +636,10 @@ struct json_object *json_object_object_get(const struct json_object *jso, const 
 json_bool json_object_object_get_ex(const struct json_object *jso, const char *key,
                                     struct json_object **value)
 {
-	if (value != NULL)
+	if (value != NULL) {
+		sandbox_check_access(&(*value));
 		*value = NULL;
+	}
 
 	if (NULL == jso)
 		return 0;
@@ -609,8 +650,10 @@ json_bool json_object_object_get_ex(const struct json_object *jso, const char *k
 		return lh_table_lookup_ex(JC_OBJECT_C(jso)->c_object, (const void *)key,
 		                          (void **)value);
 	default:
-		if (value != NULL)
+		if (value != NULL) {
+			sandbox_check_access(&(*value));
 			*value = NULL;
+		}
 		return 0;
 	}
 }
@@ -636,6 +679,7 @@ struct json_object *json_object_new_boolean(json_bool b)
 	struct json_object_boolean *jso = JSON_OBJECT_NEW(boolean);
 	if (!jso)
 		return NULL;
+	sandbox_check_access(&(jso->c_boolean));
 	jso->c_boolean = b;
 	return &jso->base;
 }
@@ -664,6 +708,7 @@ int json_object_set_boolean(struct json_object *jso, json_bool new_value)
 {
 	if (!jso || jso->o_type != json_type_boolean)
 		return 0;
+	sandbox_check_access(&(JC_BOOL(jso)->c_boolean));
 	JC_BOOL(jso)->c_boolean = new_value;
 	return 1;
 }
@@ -696,20 +741,26 @@ int32_t json_object_get_int(const struct json_object *jso)
 	if (!jso)
 		return 0;
 
+	sandbox_check_access(&(o_type));
 	o_type = jso->o_type;
 	if (o_type == json_type_int)
 	{
 		const struct json_object_int *jsoint = JC_INT_C(jso);
 		if (jsoint->cint_type == json_object_int_type_int64)
 		{
+			sandbox_check_access(&(cint64));
 			cint64 = jsoint->cint.c_int64;
 		}
 		else
 		{
-			if (jsoint->cint.c_uint64 >= INT64_MAX)
+			if (jsoint->cint.c_uint64 >= INT64_MAX) {
+				sandbox_check_access(&(cint64));
 				cint64 = INT64_MAX;
-			else
+			}
+			else {
+				sandbox_check_access(&(cint64));
 				cint64 = (int64_t)jsoint->cint.c_uint64;
+			}
 		}
 	}
 	else if (o_type == json_type_string)
@@ -720,6 +771,7 @@ int32_t json_object_get_int(const struct json_object *jso)
 		 */
 		if (json_parse_int64(get_string_component(jso), &cint64) != 0)
 			return 0; /* whoops, it didn't work. */
+		sandbox_check_access(&(o_type));
 		o_type = json_type_int;
 	}
 
@@ -733,6 +785,7 @@ int32_t json_object_get_int(const struct json_object *jso)
 			return INT32_MAX;
 		return (int32_t)cint64;
 	case json_type_double:
+		sandbox_check_access(&(cdouble));
 		cdouble = JC_DOUBLE_C(jso)->c_double;
 		if (cdouble <= INT32_MIN)
 			return INT32_MIN;
@@ -754,7 +807,9 @@ struct json_object *json_object_new_int64(int64_t i)
 	struct json_object_int *jso = JSON_OBJECT_NEW(int);
 	if (!jso)
 		return NULL;
+	sandbox_check_access(&(jso->cint.c_int64));
 	jso->cint.c_int64 = i;
+	sandbox_check_access(&(jso->cint_type));
 	jso->cint_type = json_object_int_type_int64;
 	return &jso->base;
 }
@@ -764,7 +819,9 @@ struct json_object *json_object_new_uint64(uint64_t i)
 	struct json_object_int *jso = JSON_OBJECT_NEW(int);
 	if (!jso)
 		return NULL;
+	sandbox_check_access(&(jso->cint.c_uint64));
 	jso->cint.c_uint64 = i;
+	sandbox_check_access(&(jso->cint_type));
 	jso->cint_type = json_object_int_type_uint64;
 	return &jso->base;
 }
@@ -849,7 +906,9 @@ int json_object_set_int64(struct json_object *jso, int64_t new_value)
 {
 	if (!jso || jso->o_type != json_type_int)
 		return 0;
+	sandbox_check_access(&(JC_INT(jso)->cint.c_int64));
 	JC_INT(jso)->cint.c_int64 = new_value;
+	sandbox_check_access(&(JC_INT(jso)->cint_type));
 	JC_INT(jso)->cint_type = json_object_int_type_int64;
 	return 1;
 }
@@ -858,7 +917,9 @@ int json_object_set_uint64(struct json_object *jso, uint64_t new_value)
 {
 	if (!jso || jso->o_type != json_type_int)
 		return 0;
+	sandbox_check_access(&(JC_INT(jso)->cint.c_uint64));
 	JC_INT(jso)->cint.c_uint64 = new_value;
+	sandbox_check_access(&(JC_INT(jso)->cint_type));
 	JC_INT(jso)->cint_type = json_object_int_type_uint64;
 	return 1;
 }
@@ -868,40 +929,50 @@ int json_object_int_inc(struct json_object *jso, int64_t val)
 	struct json_object_int *jsoint;
 	if (!jso || jso->o_type != json_type_int)
 		return 0;
+	sandbox_check_access(&(jsoint));
 	jsoint = JC_INT(jso);
 	switch (jsoint->cint_type)
 	{
 	case json_object_int_type_int64:
 		if (val > 0 && jsoint->cint.c_int64 > INT64_MAX - val)
 		{
+			sandbox_check_access(&(jsoint->cint.c_uint64));
 			jsoint->cint.c_uint64 = (uint64_t)jsoint->cint.c_int64 + (uint64_t)val;
+			sandbox_check_access(&(jsoint->cint_type));
 			jsoint->cint_type = json_object_int_type_uint64;
 		}
 		else if (val < 0 && jsoint->cint.c_int64 < INT64_MIN - val)
 		{
+			sandbox_check_access(&(jsoint->cint.c_int64));
 			jsoint->cint.c_int64 = INT64_MIN;
 		}
 		else
 		{
+			sandbox_check_access(&(jsoint->cint.c_int64));
 			jsoint->cint.c_int64 += val;
 		}
 		return 1;
 	case json_object_int_type_uint64:
 		if (val > 0 && jsoint->cint.c_uint64 > UINT64_MAX - (uint64_t)val)
 		{
+			sandbox_check_access(&(jsoint->cint.c_uint64));
 			jsoint->cint.c_uint64 = UINT64_MAX;
 		}
 		else if (val < 0 && jsoint->cint.c_uint64 < (uint64_t)(-val))
 		{
+			sandbox_check_access(&(jsoint->cint.c_int64));
 			jsoint->cint.c_int64 = (int64_t)jsoint->cint.c_uint64 + val;
+			sandbox_check_access(&(jsoint->cint_type));
 			jsoint->cint_type = json_object_int_type_int64;
 		}
 		else if (val < 0 && jsoint->cint.c_uint64 >= (uint64_t)(-val))
 		{
+			sandbox_check_access(&(jsoint->cint.c_uint64));
 			jsoint->cint.c_uint64 -= (uint64_t)(-val);
 		}
 		else
 		{
+			sandbox_check_access(&(jsoint->cint.c_uint64));
 			jsoint->cint.c_uint64 += val;
 		}
 		return 1;
@@ -924,12 +995,16 @@ int json_c_set_serialization_double_format(const char *double_format, int global
 #if defined(HAVE___THREAD)
 		if (tls_serialization_float_format)
 		{
+			sandbox_unregister_var(tls_serialization_float_format);
 			free(tls_serialization_float_format);
+			sandbox_check_access(&(tls_serialization_float_format));
 			tls_serialization_float_format = NULL;
 		}
 #endif
-		if (global_serialization_float_format)
+		if (global_serialization_float_format) {
+			sandbox_unregister_var(global_serialization_float_format);
 			free(global_serialization_float_format);
+		}
 		if (double_format)
 		{
 			char *p = strdup(double_format);
@@ -939,10 +1014,12 @@ int json_c_set_serialization_double_format(const char *double_format, int global
 				                     "out of memory\n");
 				return -1;
 			}
+			sandbox_check_access(&(global_serialization_float_format));
 			global_serialization_float_format = p;
 		}
 		else
 		{
+			sandbox_check_access(&(global_serialization_float_format));
 			global_serialization_float_format = NULL;
 		}
 	}
@@ -951,7 +1028,9 @@ int json_c_set_serialization_double_format(const char *double_format, int global
 #if defined(HAVE___THREAD)
 		if (tls_serialization_float_format)
 		{
+			sandbox_unregister_var(tls_serialization_float_format);
 			free(tls_serialization_float_format);
+			sandbox_check_access(&(tls_serialization_float_format));
 			tls_serialization_float_format = NULL;
 		}
 		if (double_format)
@@ -963,10 +1042,12 @@ int json_c_set_serialization_double_format(const char *double_format, int global
 				                     "out of memory\n");
 				return -1;
 			}
+			sandbox_check_access(&(tls_serialization_float_format));
 			tls_serialization_float_format = p;
 		}
 		else
 		{
+			sandbox_check_access(&(tls_serialization_float_format));
 			tls_serialization_float_format = NULL;
 		}
 #else
@@ -997,14 +1078,19 @@ static int json_object_double_to_json_string_format(struct json_object *jso, str
 	 */
 	if (isnan(jsodbl->c_double))
 	{
+		sandbox_check_access(&(size));
 		size = snprintf(buf, sizeof(buf), "NaN");
 	}
 	else if (isinf(jsodbl->c_double))
 	{
-		if (jsodbl->c_double > 0)
+		if (jsodbl->c_double > 0) {
+			sandbox_check_access(&(size));
 			size = snprintf(buf, sizeof(buf), "Infinity");
-		else
+		}
+		else {
+			sandbox_check_access(&(size));
 			size = snprintf(buf, sizeof(buf), "-Infinity");
+		}
 	}
 	else
 	{
@@ -1015,29 +1101,44 @@ static int json_object_double_to_json_string_format(struct json_object *jso, str
 		if (!format)
 		{
 #if defined(HAVE___THREAD)
-			if (tls_serialization_float_format)
+			if (tls_serialization_float_format) {
+				sandbox_check_access(&(format));
 				format = tls_serialization_float_format;
+			}
 			else
 #endif
-			    if (global_serialization_float_format)
+			    if (global_serialization_float_format) {
+				sandbox_check_access(&(format));
 				format = global_serialization_float_format;
-			else
-				format = std_format;
+			}
+		else {
+			sandbox_check_access(&(format));
+			format = std_format;
+			}
 		}
+		sandbox_check_access(&(size));
 		size = snprintf(buf, sizeof(buf), format, jsodbl->c_double);
 
 		if (size < 0)
 			return -1;
 
+		sandbox_check_access(&(p));
 		p = strchr(buf, ',');
-		if (p)
+		if (p) {
+			sandbox_check_access(&(*p));
 			*p = '.';
-		else
+		}
+		else {
+			sandbox_check_access(&(p));
 			p = strchr(buf, '.');
+		}
 
-		if (format == std_format || strstr(format, ".0f") == NULL)
+		if (format == std_format || strstr(format, ".0f") == NULL) {
+			sandbox_check_access(&(format_drops_decimals));
 			format_drops_decimals = 1;
+		}
 
+		sandbox_check_access(&(looks_numeric));
 		looks_numeric = /* Looks like *some* kind of number */
 		    is_plain_digit(buf[0]) || (size > 1 && buf[0] == '-' && is_plain_digit(buf[1]));
 
@@ -1048,6 +1149,7 @@ static int json_object_double_to_json_string_format(struct json_object *jso, str
 			// Ensure it looks like a float, even if snprintf didn't,
 			//  unless a custom format is set to omit the decimal.
 			strcat(buf, ".0");
+			sandbox_check_access(&(size));
 			size += 2;
 		}
 		if (p && (flags & JSON_C_TO_STRING_NOZERO))
@@ -1056,12 +1158,17 @@ static int json_object_double_to_json_string_format(struct json_object *jso, str
 			p++;
 			for (q = p; *q; q++)
 			{
-				if (*q != '0')
+				if (*q != '0') {
+					sandbox_check_access(&(p));
 					p = q;
+				}
 			}
 			/* drop trailing zeroes */
-			if (*p != 0)
+			if (*p != 0) {
+				sandbox_check_access(&(*(++p)));
 				*(++p) = 0;
+			}
+			sandbox_check_access(&(size));
 			size = p - buf;
 		}
 	}
@@ -1069,10 +1176,12 @@ static int json_object_double_to_json_string_format(struct json_object *jso, str
 	if (size < 0)
 		return -1;
 
-	if (size >= (int)sizeof(buf))
+	if (size >= (int)sizeof(buf)) {
 		// The standard formats are guaranteed not to overrun the buffer,
 		// but if a custom one happens to do so, just silently truncate.
+		sandbox_check_access(&(size));
 		size = sizeof(buf) - 1;
+	}
 	printbuf_memappend(pb, buf, size);
 	return size;
 }
@@ -1095,7 +1204,9 @@ struct json_object *json_object_new_double(double d)
 	struct json_object_double *jso = JSON_OBJECT_NEW(double);
 	if (!jso)
 		return NULL;
+	sandbox_check_access(&(jso->base._to_json_string));
 	jso->base._to_json_string = &json_object_double_to_json_string_default;
+	sandbox_check_access(&(jso->c_double));
 	jso->c_double = d;
 	return &jso->base;
 }
@@ -1107,10 +1218,12 @@ struct json_object *json_object_new_double_s(double d, const char *ds)
 	if (!jso)
 		return NULL;
 
+	sandbox_check_access(&(new_ds));
 	new_ds = strdup(ds);
 	if (!new_ds)
 	{
 		json_object_generic_delete(jso);
+		sandbox_check_access(&(errno));
 		errno = ENOMEM;
 		return NULL;
 	}
@@ -1140,6 +1253,7 @@ int json_object_userdata_to_json_string(struct json_object *jso, struct printbuf
 
 void json_object_free_userdata(struct json_object *jso, void *userdata)
 {
+	sandbox_unregister_var(userdata);
 	free(userdata);
 }
 
@@ -1162,12 +1276,15 @@ double json_object_get_double(const struct json_object *jso)
 		}
 	case json_type_boolean: return JC_BOOL_C(jso)->c_boolean;
 	case json_type_string:
+		sandbox_check_access(&(errno));
 		errno = 0;
+		sandbox_check_access(&(cdouble));
 		cdouble = strtod(get_string_component(jso), &errPtr);
 
 		/* if conversion stopped at the first character, return 0.0 */
 		if (errPtr == get_string_component(jso))
 		{
+			sandbox_check_access(&(errno));
 			errno = EINVAL;
 			return 0.0;
 		}
@@ -1179,6 +1296,7 @@ double json_object_get_double(const struct json_object *jso)
 		 */
 		if (*errPtr != '\0')
 		{
+			sandbox_check_access(&(errno));
 			errno = EINVAL;
 			return 0.0;
 		}
@@ -1194,10 +1312,13 @@ double json_object_get_double(const struct json_object *jso)
 		 *
 		 * See CERT guideline ERR30-C
 		 */
-		if ((HUGE_VAL == cdouble || -HUGE_VAL == cdouble) && (ERANGE == errno))
+		if ((HUGE_VAL == cdouble || -HUGE_VAL == cdouble) && (ERANGE == errno)) {
+			sandbox_check_access(&(cdouble));
 			cdouble = 0.0;
+		}
 		return cdouble;
-	default: errno = EINVAL; return 0.0;
+	default: sandbox_check_access(&(errno));
+		errno = EINVAL; return 0.0;
 	}
 }
 
@@ -1205,6 +1326,7 @@ int json_object_set_double(struct json_object *jso, double new_value)
 {
 	if (!jso || jso->o_type != json_type_double)
 		return 0;
+	sandbox_check_access(&(JC_DOUBLE(jso)->c_double));
 	JC_DOUBLE(jso)->c_double = new_value;
 	if (jso->_to_json_string == &_json_object_userdata_to_json_string)
 		json_object_set_serializer(jso, NULL, NULL, NULL);
@@ -1225,8 +1347,10 @@ static int json_object_string_to_json_string(struct json_object *jso, struct pri
 
 static void json_object_string_delete(struct json_object *jso)
 {
-	if (JC_STRING(jso)->len < 0)
+	if (JC_STRING(jso)->len < 0) {
+		sandbox_unregister_var(JC_STRING(jso)->c_string.pdata);
 		free(JC_STRING(jso)->c_string.pdata);
+	}
 	json_object_generic_delete(jso);
 }
 
@@ -1250,20 +1374,27 @@ static struct json_object *_json_object_new_string(const char *s, const size_t l
 	 */
 	if (len > (SSIZE_T_MAX - (sizeof(*jso) - sizeof(jso->c_string)) - 1))
 		return NULL;
+	sandbox_check_access(&(objsize));
 	objsize = (sizeof(*jso) - sizeof(jso->c_string)) + len + 1;
-	if (len < sizeof(void *))
+	if (len < sizeof(void *)) {
 		// We need a minimum size to support json_object_set_string() mutability
 		// so we can stuff a pointer into pdata :(
+		sandbox_check_access(&(objsize));
 		objsize += sizeof(void *) - len;
+	}
 
+	sandbox_check_access(&(jso));
 	jso = (struct json_object_string *)json_object_new(json_type_string, objsize,
 	                                                   &json_object_string_to_json_string);
 
 	if (!jso)
 		return NULL;
+	sandbox_check_access(&(jso->len));
 	jso->len = len;
+	sandbox_check_access_n(&(jso->c_string.idata), len);
 	memcpy(jso->c_string.idata, s, len);
 	// Cast below needed for Clang UB sanitizer
+	sandbox_check_access(&(((char *)jso->c_string.idata)[len]));
 	((char *)jso->c_string.idata)[len] = '\0';
 	return &jso->base;
 }
@@ -1292,6 +1423,7 @@ const char *json_object_get_string(struct json_object *jso)
 static inline ssize_t _json_object_get_string_len(const struct json_object_string *jso)
 {
 	ssize_t len;
+	sandbox_check_access(&(len));
 	len = jso->len;
 	return (len < 0) ? -(ssize_t)len : len;
 }
@@ -1320,17 +1452,23 @@ static int _json_object_set_string_len(json_object *jso, const char *s, size_t l
 		// length as int, cap length at INT_MAX.
 		return 0;
 
+	sandbox_check_access(&(curlen));
 	curlen = JC_STRING(jso)->len;
 	if (curlen < 0) {
 		if (len == 0) {
+			sandbox_unregister_var(JC_STRING(jso)->c_string.pdata);
 			free(JC_STRING(jso)->c_string.pdata);
+			sandbox_check_access(&(JC_STRING(jso)->len));
 			JC_STRING(jso)->len = curlen = 0;
 		} else {
+			sandbox_check_access(&(curlen));
 			curlen = -curlen;
 		}
 	}
 
+	sandbox_check_access(&(newlen));
 	newlen = len;
+	sandbox_check_access(&(dstbuf));
 	dstbuf = get_string_component_mutable(jso);
 
 	if ((ssize_t)len > curlen)
@@ -1338,23 +1476,34 @@ static int _json_object_set_string_len(json_object *jso, const char *s, size_t l
 		// We have no way to return the new ptr from realloc(jso, newlen)
 		// and we have no way of knowing whether there's extra room available
 		// so we need to stuff a pointer in to pdata :(
+		sandbox_check_access(&(dstbuf));
 		dstbuf = (char *)malloc(len + 1);
+		sandbox_register_var(_json_object_set_string_len, dstbuf,
+				     dstbuf, len + 1);
 		if (dstbuf == NULL)
 			return 0;
-		if (JC_STRING(jso)->len < 0)
+		if (JC_STRING(jso)->len < 0) {
+			sandbox_unregister_var(JC_STRING(jso)->c_string.pdata);
 			free(JC_STRING(jso)->c_string.pdata);
+		}
+		sandbox_check_access(&(JC_STRING(jso)->c_string.pdata));
 		JC_STRING(jso)->c_string.pdata = dstbuf;
+		sandbox_check_access(&(newlen));
 		newlen = -(ssize_t)len;
 	}
 	else if (JC_STRING(jso)->len < 0)
 	{
 		// We've got enough room in the separate allocated buffer,
 		// so use it as-is and continue to indicate that pdata is used.
+		sandbox_check_access(&(newlen));
 		newlen = -(ssize_t)len;
 	}
 
+	sandbox_check_access_n(&(dstbuf), len);
 	memcpy(dstbuf, (const void *)s, len);
+	sandbox_check_access(&(dstbuf[len]));
 	dstbuf[len] = '\0';
+	sandbox_check_access(&(JC_STRING(jso)->len));
 	JC_STRING(jso)->len = newlen;
 	return 1;
 }
@@ -1387,10 +1536,12 @@ static int json_object_array_to_json_string(struct json_object *jso, struct prin
 		}
 		if (flags & JSON_C_TO_STRING_PRETTY)
 			printbuf_strappend(pb, "\n");
+		sandbox_check_access(&(had_children));
 		had_children = 1;
 		if (flags & JSON_C_TO_STRING_SPACED && !(flags & JSON_C_TO_STRING_PRETTY))
 			printbuf_strappend(pb, " ");
 		indent(pb, level + 1, flags);
+		sandbox_check_access(&(val));
 		val = json_object_array_get_idx(jso, ii);
 		if (val == NULL)
 			printbuf_strappend(pb, "null");
@@ -1428,9 +1579,11 @@ struct json_object *json_object_new_array_ext(int initial_size)
 	struct json_object_array *jso = JSON_OBJECT_NEW(array);
 	if (!jso)
 		return NULL;
+	sandbox_check_access(&(jso->c_array));
 	jso->c_array = array_list_new2(&json_object_array_entry_free, initial_size);
 	if (jso->c_array == NULL)
 	{
+		sandbox_unregister_var(jso);
 		free(jso);
 		return NULL;
 	}
@@ -1461,6 +1614,7 @@ struct json_object *json_object_array_bsearch(const struct json_object *key,
 	struct json_object **result;
 
 	assert(json_object_get_type(jso) == json_type_array);
+	sandbox_check_access(&(result));
 	result = (struct json_object **)array_list_bsearch((const void **)(void *)&key,
 	                                                   JC_ARRAY_C(jso)->c_array, sort_fn);
 
@@ -1503,6 +1657,7 @@ static int json_array_equal(struct json_object *jso1, struct json_object *jso2)
 {
 	size_t len, i;
 
+	sandbox_check_access(&(len));
 	len = json_object_array_length(jso1);
 	if (len != json_object_array_length(jso2))
 		return 0;
@@ -1621,12 +1776,14 @@ static int json_object_copy_serializer_data(struct json_object *src, struct json
 	{
 		char *p;
 		assert(src->_userdata);
+		sandbox_check_access(&(p));
 		p = strdup(src->_userdata);
 		if (p == NULL)
 		{
 			_json_c_set_last_err("json_object_copy_serializer_data: out of memory\n");
 			return -1;
 		}
+		sandbox_check_access(&(dst->_userdata));
 		dst->_userdata = p;
 	}
 	// else if ... other supported serializers ...
@@ -1637,6 +1794,7 @@ static int json_object_copy_serializer_data(struct json_object *src, struct json
 		    "%p\n", (void *)dst->_to_json_string);
 		return -1;
 	}
+	sandbox_check_access(&(dst->_user_delete));
 	dst->_user_delete = src->_user_delete;
 	return 0;
 }
@@ -1654,17 +1812,21 @@ int json_c_shallow_copy_default(json_object *src, json_object *parent, const cha
 {
 	switch (src->o_type)
 	{
-	case json_type_boolean: *dst = json_object_new_boolean(JC_BOOL(src)->c_boolean); break;
+	case json_type_boolean: sandbox_check_access(&(*dst));
+		*dst = json_object_new_boolean(JC_BOOL(src)->c_boolean); break;
 
-	case json_type_double: *dst = json_object_new_double(JC_DOUBLE(src)->c_double); break;
+	case json_type_double: sandbox_check_access(&(*dst));
+		*dst = json_object_new_double(JC_DOUBLE(src)->c_double); break;
 
 	case json_type_int:
 		switch (JC_INT(src)->cint_type)
 		{
 		case json_object_int_type_int64:
+			sandbox_check_access(&(*dst));
 			*dst = json_object_new_int64(JC_INT(src)->cint.c_int64);
 			break;
 		case json_object_int_type_uint64:
+			sandbox_check_access(&(*dst));
 			*dst = json_object_new_uint64(JC_INT(src)->cint.c_uint64);
 			break;
 		default: json_abort("invalid cint_type");
@@ -1672,22 +1834,28 @@ int json_c_shallow_copy_default(json_object *src, json_object *parent, const cha
 		break;
 
 	case json_type_string:
+		sandbox_check_access(&(*dst));
 		*dst = json_object_new_string_len(get_string_component(src),
 		                                  _json_object_get_string_len(JC_STRING(src)));
 		break;
 
-	case json_type_object: *dst = json_object_new_object(); break;
+	case json_type_object: sandbox_check_access(&(*dst));
+		*dst = json_object_new_object(); break;
 
-	case json_type_array: *dst = json_object_new_array(); break;
+	case json_type_array: sandbox_check_access(&(*dst));
+		*dst = json_object_new_array(); break;
 
-	default: errno = EINVAL; return -1;
+	default: sandbox_check_access(&(errno));
+		errno = EINVAL; return -1;
 	}
 
 	if (!*dst)
 	{
+		sandbox_check_access(&(errno));
 		errno = ENOMEM;
 		return -1;
 	}
+	sandbox_check_access(&((*dst)->_to_json_string));
 	(*dst)->_to_json_string = src->_to_json_string;
 	// _userdata and _user_delete are copied later
 	return 1;
@@ -1708,10 +1876,12 @@ static int json_object_deep_copy_recursive(struct json_object *src, struct json_
 	size_t src_array_len, ii;
 
 	int shallow_copy_rc = 0;
+	sandbox_check_access(&(shallow_copy_rc));
 	shallow_copy_rc = shallow_copy(src, parent, key_in_parent, index_in_parent, dst);
 	/* -1=error, 1=object created ok, 2=userdata set */
 	if (shallow_copy_rc < 1)
 	{
+		sandbox_check_access(&(errno));
 		errno = EINVAL;
 		return -1;
 	}
@@ -1724,8 +1894,10 @@ static int json_object_deep_copy_recursive(struct json_object *src, struct json_
 		{
 			struct json_object *jso = NULL;
 			/* This handles the `json_type_null` case */
-			if (!iter.val)
+			if (!iter.val) {
+				sandbox_check_access(&(jso));
 				jso = NULL;
+			}
 			else if (json_object_deep_copy_recursive(iter.val, src, iter.key, UINT_MAX,
 			                                         &jso, shallow_copy) < 0)
 			{
@@ -1742,14 +1914,17 @@ static int json_object_deep_copy_recursive(struct json_object *src, struct json_
 		break;
 
 	case json_type_array:
+		sandbox_check_access(&(src_array_len));
 		src_array_len = json_object_array_length(src);
 		for (ii = 0; ii < src_array_len; ii++)
 		{
 			struct json_object *jso = NULL;
 			struct json_object *jso1 = json_object_array_get_idx(src, ii);
 			/* This handles the `json_type_null` case */
-			if (!jso1)
+			if (!jso1) {
+				sandbox_check_access(&(jso));
 				jso = NULL;
+			}
 			else if (json_object_deep_copy_recursive(jso1, src, NULL, ii, &jso,
 			                                         shallow_copy) < 0)
 			{
@@ -1784,17 +1959,22 @@ int json_object_deep_copy(struct json_object *src, struct json_object **dst,
 	/* Check if arguments are sane ; *dst must not point to a non-NULL object */
 	if (!src || !dst || *dst)
 	{
+		sandbox_check_access(&(errno));
 		errno = EINVAL;
 		return -1;
 	}
 
-	if (shallow_copy == NULL)
+	if (shallow_copy == NULL) {
+		sandbox_check_access(&(shallow_copy));
 		shallow_copy = json_c_shallow_copy_default;
+	}
 
+	sandbox_check_access(&(rc));
 	rc = json_object_deep_copy_recursive(src, NULL, NULL, UINT_MAX, dst, shallow_copy);
 	if (rc < 0)
 	{
 		json_object_put(*dst);
+		sandbox_check_access(&(*dst));
 		*dst = NULL;
 	}
 
