@@ -1,3 +1,8 @@
+# Yudi
+
+.temp.cocci
+.ipynb_checkpoints
+
 # Temp files
 *~
 *.swp
