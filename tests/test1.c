@@ -1,6 +1,7 @@
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
+#include "sandbox.h"
 #include <assert.h>
 #include <limits.h>
 #include <stddef.h>
@@ -18,7 +19,9 @@ static int sort_fn(const void *j1, const void *j2)
 	json_object *const *jso1, *const *jso2;
 	int i1, i2;
 
+	sandbox_check_access(&(jso1));
 	jso1 = (json_object *const *)j1;
+	sandbox_check_access(&(jso2));
 	jso2 = (json_object *const *)j2;
 	if (!*jso1 && !*jso2)
 		return 0;
@@ -27,7 +30,9 @@ static int sort_fn(const void *j1, const void *j2)
 	if (!*jso2)
 		return 1;
 
+	sandbox_check_access(&(i1));
 	i1 = json_object_get_int(*jso1);
+	sandbox_check_access(&(i2));
 	i2 = json_object_get_int(*jso2);
 
 	return i1 - i2;
@@ -40,17 +45,21 @@ static const char *to_json_string(json_object *obj, int flags)
 	char *copy;
 	const char *result;
 
+	sandbox_check_access(&(result));
 	result = json_object_to_json_string_length(obj, flags, &length);
+	sandbox_check_access(&(copy));
 	copy = strdup(result);
 	if (copy == NULL)
 		printf("to_json_string: Allocation failed!\n");
 	else
 	{
+		sandbox_check_access(&(result));
 		result = json_object_to_json_string_ext(obj, flags);
 		if (length != strlen(result))
 			printf("to_json_string: Length mismatch!\n");
 		if (strcmp(copy, result) != 0)
 			printf("to_json_string: Comparison Failed!\n");
+		sandbox_unregister_var(copy);
 		free(copy);
 	}
 	return result;
@@ -65,6 +74,7 @@ json_object *make_array(void)
 {
 	json_object *my_array;
 
+	sandbox_check_access(&(my_array));
 	my_array = json_object_new_array();
 	json_object_array_add(my_array, json_object_new_int(1));
 	json_object_array_add(my_array, json_object_new_int(2));
@@ -87,7 +97,9 @@ void test_array_del_idx(void)
 	int sflags = 0;
 #endif
 
+	sandbox_check_access(&(my_array));
 	my_array = make_array();
+	sandbox_check_access(&(orig_array_len));
 	orig_array_len = json_object_array_length(my_array);
 
 	printf("my_array=\n");
@@ -100,12 +112,14 @@ void test_array_del_idx(void)
 
 	for (ii = 0; ii < orig_array_len; ii++)
 	{
+		sandbox_check_access(&(rc));
 		rc = json_object_array_del_idx(my_array, 0, 1);
 		printf("after del_idx(0,1)=%d, my_array.to_string()=%s\n", rc,
 		       json_object_to_json_string(my_array));
 	}
 
 	/* One more time, with the empty array: */
+	sandbox_check_access(&(rc));
 	rc = json_object_array_del_idx(my_array, 0, 1);
 	printf("after del_idx(0,1)=%d, my_array.to_string()=%s\n", rc,
 	       json_object_to_json_string(my_array));
@@ -113,7 +127,9 @@ void test_array_del_idx(void)
 	json_object_put(my_array);
 
 	/* Delete all array indexes at once */
+	sandbox_check_access(&(my_array));
 	my_array = make_array();
+	sandbox_check_access(&(rc));
 	rc = json_object_array_del_idx(my_array, 0, orig_array_len);
 	printf("after del_idx(0,%d)=%d, my_array.to_string()=%s\n", (int)orig_array_len, rc,
 	       json_object_to_json_string(my_array));
@@ -121,7 +137,9 @@ void test_array_del_idx(void)
 	json_object_put(my_array);
 
 	/* Delete *more* than all array indexes at once */
+	sandbox_check_access(&(my_array));
 	my_array = make_array();
+	sandbox_check_access(&(rc));
 	rc = json_object_array_del_idx(my_array, 0, orig_array_len + 1);
 	printf("after del_idx(0,%d)=%d, my_array.to_string()=%s\n", (int)(orig_array_len + 1), rc,
 	       json_object_to_json_string(my_array));
@@ -129,7 +147,9 @@ void test_array_del_idx(void)
 	json_object_put(my_array);
 
 	/* Delete some array indexes, then add more */
+	sandbox_check_access(&(my_array));
 	my_array = make_array();
+	sandbox_check_access(&(rc));
 	rc = json_object_array_del_idx(my_array, 0, orig_array_len - 1);
 	printf("after del_idx(0,%d)=%d, my_array.to_string()=%s\n", (int)(orig_array_len - 1), rc,
 	       json_object_to_json_string(my_array));
@@ -153,6 +173,7 @@ void test_array_list_expand_internal(void)
 	int sflags = 0;
 #endif
 
+	sandbox_check_access(&(my_array));
 	my_array = make_array();
 	printf("my_array=\n");
 	for (ii = 0; ii < json_object_array_length(my_array); ii++)
@@ -163,22 +184,29 @@ void test_array_list_expand_internal(void)
 	printf("my_array.to_string()=%s\n", json_object_to_json_string(my_array));
 
 	/* Put iNdex < array->size, no expand. */
+	sandbox_check_access(&(rc));
 	rc = json_object_array_put_idx(my_array, 5, json_object_new_int(6));
 	printf("put_idx(5,6)=%d\n", rc);
 
 	/* array->size < Put Index < array->size * 2 <= SIZE_T_MAX, the size = array->size * 2. */
+	sandbox_check_access(&(idx));
 	idx = ARRAY_LIST_DEFAULT_SIZE * 2 - 1;
+	sandbox_check_access(&(rc));
 	rc = json_object_array_put_idx(my_array, idx, json_object_new_int(0));
 	printf("put_idx(%d,0)=%d\n", (int)(idx), rc);
 
 	/* array->size * 2 < Put Index, the size = Put Index. */
+	sandbox_check_access(&(idx));
 	idx = ARRAY_LIST_DEFAULT_SIZE * 2 * 2 + 1;
+	sandbox_check_access(&(rc));
 	rc = json_object_array_put_idx(my_array, idx, json_object_new_int(0));
 	printf("put_idx(%d,0)=%d\n", (int)(idx), rc);
 
 	/* SIZE_T_MAX <= Put Index, it will fail and the size will no change. */
+	sandbox_check_access(&(idx));
 	idx = SIZE_MAX; // SIZE_MAX = SIZE_T_MAX
 	json_object *tmp = json_object_new_int(10);
+	sandbox_check_access(&(rc));
 	rc = json_object_array_put_idx(my_array, idx, tmp);
 	printf("put_idx(SIZE_T_MAX,0)=%d\n", rc);
 	if (rc == -1)
@@ -200,19 +228,23 @@ int main(int argc, char **argv)
 	MC_SET_DEBUG(1);
 
 #ifdef TEST_FORMATTED
+	sandbox_check_access(&(sflags));
 	sflags = parse_flags(argc, argv);
 #endif
 
+	sandbox_check_access(&(my_string));
 	my_string = json_object_new_string("\t");
 	printf("my_string=%s\n", json_object_get_string(my_string));
 	printf("my_string.to_string()=%s\n", json_object_to_json_string(my_string));
 	json_object_put(my_string);
 
+	sandbox_check_access(&(my_string));
 	my_string = json_object_new_string("\\");
 	printf("my_string=%s\n", json_object_get_string(my_string));
 	printf("my_string.to_string()=%s\n", json_object_to_json_string(my_string));
 	json_object_put(my_string);
 
+	sandbox_check_access(&(my_string));
 	my_string = json_object_new_string("/");
 	printf("my_string=%s\n", json_object_get_string(my_string));
 	printf("my_string.to_string()=%s\n", json_object_to_json_string(my_string));
@@ -220,6 +252,7 @@ int main(int argc, char **argv)
 	       json_object_to_json_string_ext(my_string, JSON_C_TO_STRING_NOSLASHESCAPE));
 	json_object_put(my_string);
 
+	sandbox_check_access(&(my_string));
 	my_string = json_object_new_string("/foo/bar/baz");
 	printf("my_string=%s\n", json_object_get_string(my_string));
 	printf("my_string.to_string()=%s\n", json_object_to_json_string(my_string));
@@ -227,17 +260,21 @@ int main(int argc, char **argv)
 	       json_object_to_json_string_ext(my_string, JSON_C_TO_STRING_NOSLASHESCAPE));
 	json_object_put(my_string);
 
+	sandbox_check_access(&(my_string));
 	my_string = json_object_new_string("foo");
 	printf("my_string=%s\n", json_object_get_string(my_string));
 	printf("my_string.to_string()=%s\n", json_object_to_json_string(my_string));
 
+	sandbox_check_access(&(my_int));
 	my_int = json_object_new_int(9);
 	printf("my_int=%d\n", json_object_get_int(my_int));
 	printf("my_int.to_string()=%s\n", json_object_to_json_string(my_int));
 
+	sandbox_check_access(&(my_null));
 	my_null = json_object_new_null();
 	printf("my_null.to_string()=%s\n", json_object_to_json_string(my_null));
 
+	sandbox_check_access(&(my_array));
 	my_array = json_object_new_array();
 	json_object_array_add(my_array, json_object_new_int(1));
 	json_object_array_add(my_array, json_object_new_int(2));
@@ -256,6 +293,7 @@ int main(int argc, char **argv)
 	test_array_del_idx();
 	test_array_list_expand_internal();
 
+	sandbox_check_access(&(my_array));
 	my_array = json_object_new_array_ext(5);
 	json_object_array_add(my_array, json_object_new_int(3));
 	json_object_array_add(my_array, json_object_new_int(1));
@@ -283,6 +321,7 @@ int main(int argc, char **argv)
 	       json_object_to_json_string(result));
 	json_object_put(one);
 
+	sandbox_check_access(&(my_object));
 	my_object = json_object_new_object();
 	int rc = json_object_object_add(my_object, "abc", my_object);
 	if (rc != -1)
@@ -319,22 +358,26 @@ int main(int argc, char **argv)
 	printf("my_object.to_string()=%s\n", json_object_to_json_string(my_object));
 
 	json_object_put(my_array);
+	sandbox_check_access(&(my_array));
 	my_array = json_object_new_array_ext(INT_MIN + 1);
 	if (my_array != NULL)
 	{
 		printf("ERROR: able to allocate an array of negative size!\n");
 		fflush(stdout);
 		json_object_put(my_array);
+		sandbox_check_access(&(my_array));
 		my_array = NULL;
 	}
 
 #if SIZEOF_SIZE_T == SIZEOF_INT
+	sandbox_check_access(&(my_array));
 	my_array = json_object_new_array_ext(INT_MAX / 2 + 2);
 	if (my_array != NULL)
 	{
 		printf("ERROR: able to allocate an array of insufficient size!\n");
 		fflush(stdout);
 		json_object_put(my_array);
+		sandbox_check_access(&(my_array));
 		my_array = NULL;
 	}
 #endif

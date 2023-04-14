@@ -1,6 +1,7 @@
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
+#include "sandbox.h"
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -38,30 +39,37 @@ int main(void)
 	printf("jso.to_string()=%s\n", json_object_to_json_string(jso));
 
 	int rv;
+	sandbox_check_access(&(rv));
 	rv = json_c_visit(jso, 0, emit_object, NULL);
 	printf("json_c_visit(emit_object)=%d\n", rv);
 	printf("================================\n\n");
 
+	sandbox_check_access(&(rv));
 	rv = json_c_visit(jso, 0, skip_arrays, NULL);
 	printf("json_c_visit(skip_arrays)=%d\n", rv);
 	printf("================================\n\n");
 
+	sandbox_check_access(&(rv));
 	rv = json_c_visit(jso, 0, pop_and_stop, NULL);
 	printf("json_c_visit(pop_and_stop)=%d\n", rv);
 	printf("================================\n\n");
 
+	sandbox_check_access(&(rv));
 	rv = json_c_visit(jso, 0, err_on_subobj2, NULL);
 	printf("json_c_visit(err_on_subobj2)=%d\n", rv);
 	printf("================================\n\n");
 
+	sandbox_check_access(&(rv));
 	rv = json_c_visit(jso, 0, pop_array, NULL);
 	printf("json_c_visit(pop_array)=%d\n", rv);
 	printf("================================\n\n");
 
+	sandbox_check_access(&(rv));
 	rv = json_c_visit(jso, 0, stop_array, NULL);
 	printf("json_c_visit(stop_array)=%d\n", rv);
 	printf("================================\n\n");
 
+	sandbox_check_access(&(rv));
 	rv = json_c_visit(jso, 0, err_return, NULL);
 	printf("json_c_visit(err_return)=%d\n", rv);
 	printf("================================\n\n");

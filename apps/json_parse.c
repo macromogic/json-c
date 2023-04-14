@@ -1,3 +1,4 @@
+#include "sandbox.h"
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -53,6 +54,7 @@ static void showmem(void)
 {
 #ifdef HAVE_GETRUSAGE
 	struct rusage rusage;
+	sandbox_check_access_n(&rusage, sizeof(rusage));
 	memset(&rusage, 0, sizeof(rusage));
 	getrusage(RUSAGE_SELF, &rusage);
 	printf("maxrss: %ld KB\n", rusage.ru_maxrss);
@@ -67,6 +69,7 @@ static int parseit(int fd, int (*callback)(struct json_object *))
 	int depth = JSON_TOKENER_DEFAULT_DEPTH;
 	json_tokener *tok;
 
+	sandbox_check_access(&(tok));
 	tok = json_tokener_new_ex(depth);
 	if (!tok)
 	{
@@ -87,10 +90,12 @@ static int parseit(int fd, int (*callback)(struct json_object *))
 	while ((ret = read(fd, buf, sizeof(buf))) > 0)
 	{
 		size_t retu = (size_t)ret;  // We know it's positive
+		sandbox_check_access(&(total_read));
 		total_read += retu;
 		size_t start_pos = 0;
 		while (start_pos != retu)
 		{
+			sandbox_check_access(&(obj));
 			obj = json_tokener_parse_ex(tok, &buf[start_pos], retu - start_pos);
 			enum json_tokener_error jerr = json_tokener_get_error(tok);
 			size_t parse_end = json_tokener_get_parse_end(tok);
@@ -115,6 +120,7 @@ static int parseit(int fd, int (*callback)(struct json_object *))
 					return 1;
 				}
 			}
+			sandbox_check_access(&(start_pos));
 			start_pos += json_tokener_get_parse_end(tok);
 			assert(start_pos <= retu);
 		}
@@ -141,10 +147,14 @@ static int showobj(struct json_object *new_obj)
 	if (show_output)
 	{
 		const char *output;
-		if (formatted_output)
+		if (formatted_output) {
+			sandbox_check_access(&(output));
 			output = json_object_to_json_string(new_obj);
-		else
+		}
+		else {
+			sandbox_check_access(&(output));
 			output = json_object_to_json_string_ext(new_obj, JSON_C_TO_STRING_PRETTY);
+		}
 		printf("%s\n", output);
 	}
 
@@ -155,8 +165,10 @@ static int showobj(struct json_object *new_obj)
 static void usage(const char *argv0, int exitval, const char *errmsg)
 {
 	FILE *fp = stdout;
-	if (exitval != 0)
+	if (exitval != 0) {
+		sandbox_check_access(&(fp));
 		fp = stderr;
+	}
 	if (errmsg != NULL)
 		fprintf(fp, "ERROR: %s\n\n", errmsg);
 	fprintf(fp, "Usage: %s [-f] [-n] [-s]\n", argv0);
@@ -178,9 +190,12 @@ int main(int argc, char **argv)
 	{
 		switch (opt)
 		{
-		case 'f': formatted_output = 1; break;
-		case 'n': show_output = 0; break;
-		case 's': strict_mode = 1; break;
+		case 'f': sandbox_check_access(&(formatted_output));
+			formatted_output = 1; break;
+		case 'n': sandbox_check_access(&(show_output));
+			show_output = 0; break;
+		case 's': sandbox_check_access(&(strict_mode));
+			strict_mode = 1; break;
 		case 'h': usage(argv[0], 0, NULL);
 		default: /* '?' */ usage(argv[0], EXIT_FAILURE, "Unknown arguments");
 		}
@@ -189,6 +204,7 @@ int main(int argc, char **argv)
 	{
 		usage(argv[0], EXIT_FAILURE, "Expected argument after options");
 	}
+	sandbox_check_access(&(fname));
 	fname = argv[optind];
 
 	int fd = open(argv[optind], O_RDONLY, 0);

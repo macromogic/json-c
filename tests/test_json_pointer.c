@@ -1,6 +1,7 @@
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
+#include "sandbox.h"
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
@@ -84,12 +85,14 @@ static void test_example_get(void)
 	};
 	/* clang-format on */
 
+	sandbox_check_access(&(jo1));
 	jo1 = json_tokener_parse(input_json_str);
 	assert(NULL != jo1);
 	printf("PASSED - GET - LOADED TEST JSON\n");
 	printf("%s\n", json_object_get_string(jo1));
 
 	/* Test empty string returns entire object */
+	sandbox_check_access(&(jo2));
 	jo2 = NULL;
 	/* For each test, we're trying to see that NULL **value works (does no segfault) */
 	assert(0 == json_pointer_get(jo1, "", NULL));
@@ -98,10 +101,12 @@ static void test_example_get(void)
 	printf("PASSED - GET - ENTIRE OBJECT WORKED\n");
 
 	/* Test /foo == ['bar', 'baz']  */
+	sandbox_check_access(&(jo3));
 	jo3 = json_object_new_array();
 	json_object_array_add(jo3, json_object_new_string("bar"));
 	json_object_array_add(jo3, json_object_new_string("baz"));
 
+	sandbox_check_access(&(jo2));
 	jo2 = NULL;
 	assert(0 == json_pointer_get(jo1, "/foo", NULL));
 	assert(0 == json_pointer_get(jo1, "/foo", &jo2));
@@ -111,6 +116,7 @@ static void test_example_get(void)
 	printf("PASSED - GET - /foo == ['bar', 'baz']\n");
 
 	/* Test /foo/0 == 'bar' */
+	sandbox_check_access(&(jo2));
 	jo2 = NULL;
 	assert(0 == json_pointer_get(jo1, "/foo/0", NULL));
 	assert(0 == json_pointer_get(jo1, "/foo/0", &jo2));
@@ -129,6 +135,7 @@ static void test_recursion_get(void)
 {
 	struct json_object *jo2, *jo1 = json_tokener_parse(rec_input_json_str);
 
+	sandbox_check_access(&(jo2));
 	jo2 = NULL;
 	assert(jo1 != NULL);
 	printf("%s\n", json_object_get_string(jo1));
@@ -169,7 +176,9 @@ static void test_wrong_inputs_get(void)
 	printf("%s\n", json_object_get_string(jo1));
 
 	/* Test leading '/' missing */
+	sandbox_check_access(&(jo2));
 	jo2 = NULL;
+	sandbox_check_access(&(errno));
 	errno = 0;
 	assert(0 != json_pointer_get(jo1, "foo/bar", NULL));
 	assert(0 != json_pointer_get(jo1, "foo/bar", &jo2));
@@ -178,50 +187,64 @@ static void test_wrong_inputs_get(void)
 	printf("PASSED - GET - MISSING /\n");
 
 	/* Test combinations of NULL params for input json & path */
+	sandbox_check_access(&(errno));
 	errno = 0;
 	assert(0 != json_pointer_get(NULL, "foo/bar", NULL));
 	assert(errno == EINVAL);
+	sandbox_check_access(&(errno));
 	errno = 0;
 	assert(0 != json_pointer_get(NULL, NULL, NULL));
 	assert(errno == EINVAL);
+	sandbox_check_access(&(errno));
 	errno = 0;
 	assert(0 != json_pointer_getf(NULL, NULL, NULL));
 	assert(errno == EINVAL);
+	sandbox_check_access(&(errno));
 	errno = 0;
 	assert(0 != json_pointer_get(jo1, NULL, NULL));
 	assert(errno == EINVAL);
+	sandbox_check_access(&(errno));
 	errno = 0;
 	assert(0 != json_pointer_getf(jo1, NULL, NULL));
 	assert(errno == EINVAL);
 	printf("PASSED - GET - NULL INPUTS\n");
 
 	/* Test invalid indexes for array */
+	sandbox_check_access(&(errno));
 	errno = 0;
 	assert(0 != json_pointer_get(jo1, "/foo/a", NULL));
 	assert(errno == EINVAL);
+	sandbox_check_access(&(errno));
 	errno = 0;
 	assert(0 != json_pointer_get(jo1, "/foo/01", NULL));
 	assert(errno == EINVAL);
+	sandbox_check_access(&(errno));
 	errno = 0;
 	assert(0 != json_pointer_getf(jo1, NULL, "/%s/a", "foo"));
 	assert(errno == EINVAL);
+	sandbox_check_access(&(errno));
 	errno = 0;
 	assert(0 != json_pointer_get(jo1, "/foo/-", NULL));
 	assert(errno == EINVAL);
+	sandbox_check_access(&(errno));
 	errno = 0;
 	/* Test optimized array path */
 	assert(0 != json_pointer_get(jo1, "/foo/4", NULL));
 	assert(errno == ENOENT);
+	sandbox_check_access(&(errno));
 	errno = 0;
 	/* Test non-optimized array path */
 	assert(0 != json_pointer_getf(jo1, NULL, "%s", "/foo/22"));
 	assert(errno == ENOENT);
+	sandbox_check_access(&(errno));
 	errno = 0;
 	assert(0 != json_pointer_getf(jo1, NULL, "/%s/%d", "foo", 22));
 	assert(errno == ENOENT);
+	sandbox_check_access(&(errno));
 	errno = 0;
 	assert(0 != json_pointer_get(jo1, "/foo/-1", NULL));
 	assert(errno == EINVAL);
+	sandbox_check_access(&(errno));
 	errno = 0;
 	assert(0 != json_pointer_get(jo1, "/foo/10", NULL));
 	assert(errno == ENOENT);
@@ -257,6 +280,7 @@ static void test_example_set(void)
 	assert(0 == json_pointer_set(&jo1, "/", json_object_new_int(9)));
 	printf("PASSED - SET - / == 9\n");
 
+	sandbox_check_access(&(jo2));
 	jo2 = json_tokener_parse(
 	    "{ 'foo': [ 'bar', 'cod' ], '': 9, 'a/b': 1, 'c%d': 2, 'e^f': 3, 'g|h': 4, 'i\\\\j': "
 	    "5, 'k\\\"l': 6, ' ': 7, 'm~n': 8, 'fud': { 'gaw': [ 0, 2, 3, 4 ] } }");
@@ -298,15 +322,18 @@ static void test_wrong_inputs_set(void)
 	printf("PASSED - SET - failed with invalid array index'\n");
 	json_object_put(jo2);
 
+	sandbox_check_access(&(jo2));
 	jo2 = json_object_new_string("whatever");
 	assert(0 != json_pointer_set(&jo1, "/fud/gaw", jo2));
 	assert(0 == json_pointer_set(&jo1, "/fud", json_object_new_object()));
 	assert(0 == json_pointer_set(&jo1, "/fud/gaw", jo2)); /* re-using jo2 from above */
 	// ownership of jo2 transferred into jo1
 
+	sandbox_check_access(&(jo2));
 	jo2 = json_object_new_int(0);
 	assert(0 != json_pointer_set(&jo1, "/fud/gaw/0", jo2));
 	json_object_put(jo2);
+	sandbox_check_access(&(jo2));
 	jo2 = json_object_new_int(0);
 	assert(0 != json_pointer_set(&jo1, "/fud/gaw/", jo2));
 	json_object_put(jo2);

@@ -7,6 +7,7 @@
 #undef NDEBUG
 #endif
 #include "config.h"
+#include "sandbox.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,6 +44,7 @@ int main(int argc, char **argv)
 
 	struct json_object *new_obj;
 
+	sandbox_check_access(&(new_obj));
 	new_obj = json_tokener_parse(input);
 	printf("Parsed input: %s\n", input);
 	printf("Result is %s\n", (new_obj == NULL) ? "NULL (error!)" : "not NULL");

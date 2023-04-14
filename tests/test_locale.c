@@ -1,6 +1,7 @@
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
+#include "sandbox.h"
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -34,6 +35,7 @@ int main(int argc, char **argv)
 
 	MC_SET_DEBUG(1);
 
+	sandbox_check_access(&(new_obj));
 	new_obj = json_tokener_parse("[1.2,3.4,123456.78,5.0,2.3e10]");
 
 	(void)snprintf(buf2, sizeof(buf2), "%f", 0.1);

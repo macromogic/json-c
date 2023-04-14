@@ -3,6 +3,7 @@
 #endif
 #include "config.h"
 
+#include "sandbox.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -41,6 +42,7 @@ int parse_flags(int argc, char **argv)
 		{
 			if (strcasecmp(argv[arg_idx], format_args[jj].arg) == 0)
 			{
+				sandbox_check_access(&(sflags));
 				sflags |= format_args[jj].flag;
 				break;
 			}

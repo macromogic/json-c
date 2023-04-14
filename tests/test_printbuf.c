@@ -1,6 +1,7 @@
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
+#include "sandbox.h"
 #include <assert.h>
 #include <limits.h>
 #include <stddef.h>
@@ -24,8 +25,10 @@ static void test_basic_printbuf_memset(void)
 	struct printbuf *pb;
 
 	printf("%s: starting test\n", __func__);
+	sandbox_check_access(&(pb));
 	pb = printbuf_new();
 	sprintbuf(pb, "blue:%d", 1);
+	sandbox_check_access_n(pb, 52);
 	printbuf_memset(pb, -1, 'x', 52);
 	printf("Buffer contents:%.*s\n", printbuf_length(pb), pb->buf);
 	printbuf_free(pb);
@@ -37,31 +40,48 @@ static void test_printbuf_memset_length(void)
 	struct printbuf *pb;
 
 	printf("%s: starting test\n", __func__);
+	sandbox_check_access(&(pb));
 	pb = printbuf_new();
+	sandbox_check_access_n(pb, 0);
 	printbuf_memset(pb, -1, ' ', 0);
+	sandbox_check_access_n(pb, 0);
 	printbuf_memset(pb, -1, ' ', 0);
+	sandbox_check_access_n(pb, 0);
 	printbuf_memset(pb, -1, ' ', 0);
+	sandbox_check_access_n(pb, 0);
 	printbuf_memset(pb, -1, ' ', 0);
+	sandbox_check_access_n(pb, 0);
 	printbuf_memset(pb, -1, ' ', 0);
 	printf("Buffer length: %d\n", printbuf_length(pb));
+	sandbox_check_access_n(pb, 2);
 	printbuf_memset(pb, -1, ' ', 2);
+	sandbox_check_access_n(pb, 4);
 	printbuf_memset(pb, -1, ' ', 4);
+	sandbox_check_access_n(pb, 6);
 	printbuf_memset(pb, -1, ' ', 6);
 	printf("Buffer length: %d\n", printbuf_length(pb));
+	sandbox_check_access_n(pb, 6);
 	printbuf_memset(pb, -1, ' ', 6);
 	printf("Buffer length: %d\n", printbuf_length(pb));
+	sandbox_check_access_n(pb, 8);
 	printbuf_memset(pb, -1, ' ', 8);
+	sandbox_check_access_n(pb, 10);
 	printbuf_memset(pb, -1, ' ', 10);
+	sandbox_check_access_n(pb, 10);
 	printbuf_memset(pb, -1, ' ', 10);
+	sandbox_check_access_n(pb, 10);
 	printbuf_memset(pb, -1, ' ', 10);
+	sandbox_check_access_n(pb, 20);
 	printbuf_memset(pb, -1, ' ', 20);
 	printf("Buffer length: %d\n", printbuf_length(pb));
 
 	// No length change should occur
+	sandbox_check_access_n(pb, 30);
 	printbuf_memset(pb, 0, 'x', 30);
 	printf("Buffer length: %d\n", printbuf_length(pb));
 
 	// This should extend it by one.
+	sandbox_check_access_n(pb, printbuf_length(pb) + 1);
 	printbuf_memset(pb, 0, 'x', printbuf_length(pb) + 1);
 	printf("Buffer length: %d\n", printbuf_length(pb));
 
@@ -76,15 +96,18 @@ static void test_printbuf_memappend(int *before_resize)
 	int initial_size;
 
 	printf("%s: starting test\n", __func__);
+	sandbox_check_access(&(pb));
 	pb = printbuf_new();
 	printf("Buffer length: %d\n", printbuf_length(pb));
 
+	sandbox_check_access(&(initial_size));
 	initial_size = pb->size;
 
 	while (pb->size == initial_size)
 	{
 		printbuf_memappend_fast(pb, "x", 1);
 	}
+	sandbox_check_access(&(*before_resize));
 	*before_resize = printbuf_length(pb) - 1;
 	printf("Appended %d bytes for resize: [%s]\n", *before_resize + 1, pb->buf);
 
@@ -98,25 +121,35 @@ static void test_printbuf_memappend(int *before_resize)
 	printf("With embedded \\0 character: %d, [%s]\n", printbuf_length(pb), pb->buf);
 
 	printbuf_free(pb);
+	sandbox_check_access(&(pb));
 	pb = printbuf_new();
 	char *data = malloc(*before_resize);
+	sandbox_check_access_n(data, *before_resize);
 	memset(data, 'X', *before_resize);
 	printbuf_memappend_fast(pb, data, *before_resize);
 	printf("Append to just before resize: %d, [%s]\n", printbuf_length(pb), pb->buf);
 
+	sandbox_unregister_var(data);
 	free(data);
 	printbuf_free(pb);
 
+	sandbox_check_access(&(pb));
 	pb = printbuf_new();
+	sandbox_check_access(&(data));
 	data = malloc(*before_resize + 1);
+	sandbox_register_var(test_printbuf_memappend, data, data,
+			     *before_resize + 1);
+	sandbox_check_access_n(data, *before_resize + 1);
 	memset(data, 'X', *before_resize + 1);
 	printbuf_memappend_fast(pb, data, *before_resize + 1);
 	printf("Append to just after resize: %d, [%s]\n", printbuf_length(pb), pb->buf);
 
+	sandbox_unregister_var(data);
 	free(data);
 	printbuf_free(pb);
 
 #define SA_TEST_STR "XXXXXXXXXXXXXXXX"
+	sandbox_check_access(&(pb));
 	pb = printbuf_new();
 	printbuf_strappend(pb, SA_TEST_STR);
 	printf("Buffer size after printbuf_strappend(): %d, [%s]\n", printbuf_length(pb), pb->buf);
@@ -137,13 +170,17 @@ static void test_sprintbuf(int before_resize)
 	    " would have been written - this code handles both cases.";
 
 	printf("%s: starting test\n", __func__);
+	sandbox_check_access(&(pb));
 	pb = printbuf_new();
 	printf("Buffer length: %d\n", printbuf_length(pb));
 
 	char *data = malloc(before_resize + 1 + 1);
+	sandbox_check_access_n(data, before_resize + 1 + 1);
 	memset(data, 'X', before_resize + 1 + 1);
+	sandbox_check_access(&(data[before_resize + 1]));
 	data[before_resize + 1] = '\0';
 	sprintbuf(pb, "%s", data);
+	sandbox_unregister_var(data);
 	free(data);
 	printf("sprintbuf to just after resize(%d+1): %d, [%s], strlen(buf)=%d\n", before_resize,
 	       printbuf_length(pb), pb->buf, (int)strlen(pb->buf));
