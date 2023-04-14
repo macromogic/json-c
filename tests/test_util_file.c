@@ -7,6 +7,7 @@
 #include <io.h>
 #include <windows.h>
 #endif /* defined(WIN32) */
+#undef SANDBOX
 #include "sandbox.h"
 #include <fcntl.h>
 #include <limits.h>

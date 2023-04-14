@@ -6,6 +6,7 @@
 #include "config.h"
 #include "json_object.h"
 #include "json_tokener.h"
+#undef SANDBOX
 #include "sandbox.h"
 #include <stdio.h>
 int main(void)

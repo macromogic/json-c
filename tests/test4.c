@@ -6,6 +6,7 @@
 #undef NDEBUG
 #endif
 #include "config.h"
+#undef SANDBOX
 #include "sandbox.h"
 #include <assert.h>
 #include <stdio.h>

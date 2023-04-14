@@ -178,29 +178,29 @@ rotates.
 /* clang-format off */
 #define mix(a,b,c) \
 { \
-	sandbox_check_access(&(a));
-	a -= c;  sandbox_check_access(&(a));
-	a ^= rot(c, 4);  sandbox_check_access(&(c));
+	sandbox_check_access(&(a)); \
+	a -= c;  sandbox_check_access(&(a)); \
+	a ^= rot(c, 4);  sandbox_check_access(&(c)); \
 	c += b; \
-	sandbox_check_access(&(b));
-	b -= a;  sandbox_check_access(&(b));
-	b ^= rot(a, 6);  sandbox_check_access(&(a));
+	sandbox_check_access(&(b)); \
+	b -= a;  sandbox_check_access(&(b)); \
+	b ^= rot(a, 6);  sandbox_check_access(&(a)); \
 	a += c; \
-	sandbox_check_access(&(c));
-	c -= b;  sandbox_check_access(&(c));
-	c ^= rot(b, 8);  sandbox_check_access(&(b));
+	sandbox_check_access(&(c)); \
+	c -= b;  sandbox_check_access(&(c)); \
+	c ^= rot(b, 8);  sandbox_check_access(&(b)); \
 	b += a; \
-	sandbox_check_access(&(a));
-	a -= c;  sandbox_check_access(&(a));
-	a ^= rot(c,16);  sandbox_check_access(&(c));
+	sandbox_check_access(&(a)); \
+	a -= c;  sandbox_check_access(&(a)); \
+	a ^= rot(c,16);  sandbox_check_access(&(c)); \
 	c += b; \
-	sandbox_check_access(&(b));
-	b -= a;  sandbox_check_access(&(b));
-	b ^= rot(a,19);  sandbox_check_access(&(a));
+	sandbox_check_access(&(b)); \
+	b -= a;  sandbox_check_access(&(b)); \
+	b ^= rot(a,19);  sandbox_check_access(&(a)); \
 	a += c; \
-	sandbox_check_access(&(c));
-	c -= b;  sandbox_check_access(&(c));
-	c ^= rot(b, 4);  sandbox_check_access(&(b));
+	sandbox_check_access(&(c)); \
+	c -= b;  sandbox_check_access(&(c)); \
+	c ^= rot(b, 4);  sandbox_check_access(&(b)); \
 	b += a; \
 }
 /* clang-format on */
@@ -233,26 +233,26 @@ and these came close:
 /* clang-format off */
 #define final(a,b,c) \
 { \
-	sandbox_check_access(&(c));
-	c ^= b; sandbox_check_access(&(c));
+	sandbox_check_access(&(c)); \
+	c ^= b; sandbox_check_access(&(c)); \
 	c -= rot(b,14); \
-	sandbox_check_access(&(a));
-	a ^= c; sandbox_check_access(&(a));
+	sandbox_check_access(&(a)); \
+	a ^= c; sandbox_check_access(&(a)); \
 	a -= rot(c,11); \
-	sandbox_check_access(&(b));
-	b ^= a; sandbox_check_access(&(b));
+	sandbox_check_access(&(b)); \
+	b ^= a; sandbox_check_access(&(b)); \
 	b -= rot(a,25); \
-	sandbox_check_access(&(c));
-	c ^= b; sandbox_check_access(&(c));
+	sandbox_check_access(&(c)); \
+	c ^= b; sandbox_check_access(&(c)); \
 	c -= rot(b,16); \
-	sandbox_check_access(&(a));
-	a ^= c; sandbox_check_access(&(a));
+	sandbox_check_access(&(a)); \
+	a ^= c; sandbox_check_access(&(a)); \
 	a -= rot(c,4);  \
-	sandbox_check_access(&(b));
-	b ^= a; sandbox_check_access(&(b));
+	sandbox_check_access(&(b)); \
+	b ^= a; sandbox_check_access(&(b)); \
 	b -= rot(a,14); \
-	sandbox_check_access(&(c));
-	c ^= b; sandbox_check_access(&(c));
+	sandbox_check_access(&(c)); \
+	c ^= b; sandbox_check_access(&(c)); \
 	c -= rot(b,24); \
 }
 /* clang-format on */

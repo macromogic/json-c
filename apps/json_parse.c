@@ -1,3 +1,4 @@
+#undef SANDBOX
 #include "sandbox.h"
 #include <assert.h>
 #include <errno.h>

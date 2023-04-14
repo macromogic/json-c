@@ -3,6 +3,7 @@
 #endif
 #include "strerror_override.h"
 
+#undef SANDBOX
 #include "sandbox.h"
 #include <stdio.h>
 

@@ -1,6 +1,7 @@
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
+#undef SANDBOX
 #include "sandbox.h"
 #include <assert.h>
 #include <stdio.h>
@@ -15,7 +16,7 @@
 #define U64_MAX_S "18446744073709551615"
 #define U64_OUT_S "18446744073709551616"
 
-#define CHECK_GET(GET_F, J, EXPECTED)     { struct json_object *jtmp = J; sandbox_check_access(&(errno));
+#define CHECK_GET(GET_F, J, EXPECTED)     { struct json_object *jtmp = J; sandbox_check_access(&(errno)); \
 	errno = 0; assert(GET_F(jtmp) == EXPECTED); json_object_put(jtmp); }
 #define CHECK_GET_INT(J, EXPECTED)        CHECK_GET(json_object_get_int,    J, EXPECTED)
 #define CHECK_GET_INT64(J, EXPECTED)      CHECK_GET(json_object_get_int64,  J, EXPECTED)

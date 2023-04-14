@@ -3,6 +3,7 @@
 #endif
 #include "config.h"
 
+#undef SANDBOX
 #include "sandbox.h"
 #include <stdio.h>
 #include <string.h>

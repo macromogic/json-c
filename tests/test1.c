@@ -1,6 +1,7 @@
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
+#undef SANDBOX
 #include "sandbox.h"
 #include <assert.h>
 #include <limits.h>

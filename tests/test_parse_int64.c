@@ -2,6 +2,7 @@
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
+#undef SANDBOX
 #include "sandbox.h"
 #include <stdio.h>
 #include <string.h>

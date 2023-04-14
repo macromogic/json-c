@@ -1,3 +1,4 @@
+#undef SANDBOX
 #include "sandbox.h"
 #include <stddef.h>
 #include <stdio.h>
