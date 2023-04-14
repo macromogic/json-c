@@ -12,7 +12,6 @@
 
 #include "config.h"
 
-#include "sandbox.h"
 #include <assert.h>
 #include <limits.h>
 #include <stdarg.h>
@@ -46,10 +45,8 @@ int json_global_set_string_hash(const int h)
 {
 	switch (h)
 	{
-	case JSON_C_STR_HASH_DFLT: sandbox_check_access(&(char_hash_fn));
-		char_hash_fn = lh_char_hash; break;
-	case JSON_C_STR_HASH_PERLLIKE: sandbox_check_access(&(char_hash_fn));
-		char_hash_fn = lh_perllike_str_hash; break;
+	case JSON_C_STR_HASH_DFLT: char_hash_fn = lh_char_hash; break;
+	case JSON_C_STR_HASH_PERLLIKE: char_hash_fn = lh_perllike_str_hash; break;
 	default: return -1;
 	}
 	return 0;
@@ -178,30 +175,12 @@ rotates.
 /* clang-format off */
 #define mix(a,b,c) \
 { \
-	sandbox_check_access(&(a));
-	a -= c;  sandbox_check_access(&(a));
-	a ^= rot(c, 4);  sandbox_check_access(&(c));
-	c += b; \
-	sandbox_check_access(&(b));
-	b -= a;  sandbox_check_access(&(b));
-	b ^= rot(a, 6);  sandbox_check_access(&(a));
-	a += c; \
-	sandbox_check_access(&(c));
-	c -= b;  sandbox_check_access(&(c));
-	c ^= rot(b, 8);  sandbox_check_access(&(b));
-	b += a; \
-	sandbox_check_access(&(a));
-	a -= c;  sandbox_check_access(&(a));
-	a ^= rot(c,16);  sandbox_check_access(&(c));
-	c += b; \
-	sandbox_check_access(&(b));
-	b -= a;  sandbox_check_access(&(b));
-	b ^= rot(a,19);  sandbox_check_access(&(a));
-	a += c; \
-	sandbox_check_access(&(c));
-	c -= b;  sandbox_check_access(&(c));
-	c ^= rot(b, 4);  sandbox_check_access(&(b));
-	b += a; \
+	a -= c;  a ^= rot(c, 4);  c += b; \
+	b -= a;  b ^= rot(a, 6);  a += c; \
+	c -= b;  c ^= rot(b, 8);  b += a; \
+	a -= c;  a ^= rot(c,16);  c += b; \
+	b -= a;  b ^= rot(a,19);  a += c; \
+	c -= b;  c ^= rot(b, 4);  b += a; \
 }
 /* clang-format on */
 
@@ -233,27 +212,13 @@ and these came close:
 /* clang-format off */
 #define final(a,b,c) \
 { \
-	sandbox_check_access(&(c));
-	c ^= b; sandbox_check_access(&(c));
-	c -= rot(b,14); \
-	sandbox_check_access(&(a));
-	a ^= c; sandbox_check_access(&(a));
-	a -= rot(c,11); \
-	sandbox_check_access(&(b));
-	b ^= a; sandbox_check_access(&(b));
-	b -= rot(a,25); \
-	sandbox_check_access(&(c));
-	c ^= b; sandbox_check_access(&(c));
-	c -= rot(b,16); \
-	sandbox_check_access(&(a));
-	a ^= c; sandbox_check_access(&(a));
-	a -= rot(c,4);  \
-	sandbox_check_access(&(b));
-	b ^= a; sandbox_check_access(&(b));
-	b -= rot(a,14); \
-	sandbox_check_access(&(c));
-	c ^= b; sandbox_check_access(&(c));
-	c -= rot(b,24); \
+	c ^= b; c -= rot(b,14); \
+	a ^= c; a -= rot(c,11); \
+	b ^= a; b -= rot(a,25); \
+	c ^= b; c -= rot(b,16); \
+	a ^= c; a -= rot(c,4);  \
+	b ^= a; b -= rot(a,14); \
+	c ^= b; c -= rot(b,24); \
 }
 /* clang-format on */
 
@@ -295,10 +260,8 @@ static uint32_t hashlittle(const void *key, size_t length, uint32_t initval)
 	} u; /* needed for Mac Powerbook G4 */
 
 	/* Set up the internal state */
-	sandbox_check_access(&(a));
 	a = b = c = 0xdeadbeef + ((uint32_t)length) + initval;
 
-	sandbox_check_access(&(u.ptr));
 	u.ptr = key;
 	if (HASH_LITTLE_ENDIAN && ((u.i & 0x3) == 0)) {
 		const uint32_t *k = (const uint32_t *)key; /* read 32-bit chunks */
@@ -306,16 +269,11 @@ static uint32_t hashlittle(const void *key, size_t length, uint32_t initval)
 		/*------ all but last block: aligned reads and affect 32 bits of (a,b,c) */
 		while (length > 12)
 		{
-			sandbox_check_access(&(a));
 			a += k[0];
-			sandbox_check_access(&(b));
 			b += k[1];
-			sandbox_check_access(&(c));
 			c += k[2];
 			mix(a,b,c);
-			sandbox_check_access(&(length));
 			length -= 12;
-			sandbox_check_access(&(k));
 			k += 3;
 		}
 
@@ -344,42 +302,18 @@ static uint32_t hashlittle(const void *key, size_t length, uint32_t initval)
 
 		switch(length)
 		{
-		case 12: sandbox_check_access(&(c));
-			c+=k[2]; sandbox_check_access(&(b));
-			b+=k[1]; sandbox_check_access(&(a));
-			a+=k[0]; break;
-		case 11: sandbox_check_access(&(c));
-			c+=k[2]&0xffffff; sandbox_check_access(&(b));
-			b+=k[1]; sandbox_check_access(&(a));
-			a+=k[0]; break;
-		case 10: sandbox_check_access(&(c));
-			c+=k[2]&0xffff; sandbox_check_access(&(b));
-			b+=k[1]; sandbox_check_access(&(a));
-			a+=k[0]; break;
-		case 9 : sandbox_check_access(&(c));
-			c+=k[2]&0xff; sandbox_check_access(&(b));
-			b+=k[1]; sandbox_check_access(&(a));
-			a+=k[0]; break;
-		case 8 : sandbox_check_access(&(b));
-			b+=k[1]; sandbox_check_access(&(a));
-			a+=k[0]; break;
-		case 7 : sandbox_check_access(&(b));
-			b+=k[1]&0xffffff; sandbox_check_access(&(a));
-			a+=k[0]; break;
-		case 6 : sandbox_check_access(&(b));
-			b+=k[1]&0xffff; sandbox_check_access(&(a));
-			a+=k[0]; break;
-		case 5 : sandbox_check_access(&(b));
-			b+=k[1]&0xff; sandbox_check_access(&(a));
-			a+=k[0]; break;
-		case 4 : sandbox_check_access(&(a));
-			a+=k[0]; break;
-		case 3 : sandbox_check_access(&(a));
-			a+=k[0]&0xffffff; break;
-		case 2 : sandbox_check_access(&(a));
-			a+=k[0]&0xffff; break;
-		case 1 : sandbox_check_access(&(a));
-			a+=k[0]&0xff; break;
+		case 12: c+=k[2]; b+=k[1]; a+=k[0]; break;
+		case 11: c+=k[2]&0xffffff; b+=k[1]; a+=k[0]; break;
+		case 10: c+=k[2]&0xffff; b+=k[1]; a+=k[0]; break;
+		case 9 : c+=k[2]&0xff; b+=k[1]; a+=k[0]; break;
+		case 8 : b+=k[1]; a+=k[0]; break;
+		case 7 : b+=k[1]&0xffffff; a+=k[0]; break;
+		case 6 : b+=k[1]&0xffff; a+=k[0]; break;
+		case 5 : b+=k[1]&0xff; a+=k[0]; break;
+		case 4 : a+=k[0]; break;
+		case 3 : a+=k[0]&0xffffff; break;
+		case 2 : a+=k[0]&0xffff; break;
+		case 1 : a+=k[0]&0xff; break;
 		case 0 : return c; /* zero length strings require no mixing */
 		}
 
@@ -388,33 +322,18 @@ static uint32_t hashlittle(const void *key, size_t length, uint32_t initval)
 		const uint8_t  *k8 = (const uint8_t *)k;
 		switch(length)
 		{
-		case 12: sandbox_check_access(&(c));
-			c+=k[2]; sandbox_check_access(&(b));
-			b+=k[1]; sandbox_check_access(&(a));
-			a+=k[0]; break;
-		case 11: sandbox_check_access(&(c));
-			c+=((uint32_t)k8[10])<<16;  /* fall through */
-		case 10: sandbox_check_access(&(c));
-			c+=((uint32_t)k8[9])<<8;    /* fall through */
-		case 9 : sandbox_check_access(&(c));
-			c+=k8[8];                   /* fall through */
-		case 8 : sandbox_check_access(&(b));
-			b+=k[1]; sandbox_check_access(&(a));
-			a+=k[0]; break;
-		case 7 : sandbox_check_access(&(b));
-			b+=((uint32_t)k8[6])<<16;   /* fall through */
-		case 6 : sandbox_check_access(&(b));
-			b+=((uint32_t)k8[5])<<8;    /* fall through */
-		case 5 : sandbox_check_access(&(b));
-			b+=k8[4];                   /* fall through */
-		case 4 : sandbox_check_access(&(a));
-			a+=k[0]; break;
-		case 3 : sandbox_check_access(&(a));
-			a+=((uint32_t)k8[2])<<16;   /* fall through */
-		case 2 : sandbox_check_access(&(a));
-			a+=((uint32_t)k8[1])<<8;    /* fall through */
-		case 1 : sandbox_check_access(&(a));
-			a+=k8[0]; break;
+		case 12: c+=k[2]; b+=k[1]; a+=k[0]; break;
+		case 11: c+=((uint32_t)k8[10])<<16;  /* fall through */
+		case 10: c+=((uint32_t)k8[9])<<8;    /* fall through */
+		case 9 : c+=k8[8];                   /* fall through */
+		case 8 : b+=k[1]; a+=k[0]; break;
+		case 7 : b+=((uint32_t)k8[6])<<16;   /* fall through */
+		case 6 : b+=((uint32_t)k8[5])<<8;    /* fall through */
+		case 5 : b+=k8[4];                   /* fall through */
+		case 4 : a+=k[0]; break;
+		case 3 : a+=((uint32_t)k8[2])<<16;   /* fall through */
+		case 2 : a+=((uint32_t)k8[1])<<8;    /* fall through */
+		case 1 : a+=k8[0]; break;
 		case 0 : return c;
 		}
 
@@ -429,66 +348,42 @@ static uint32_t hashlittle(const void *key, size_t length, uint32_t initval)
 		/*--------------- all but last block: aligned reads and different mixing */
 		while (length > 12)
 		{
-			sandbox_check_access(&(a));
 			a += k[0] + (((uint32_t)k[1])<<16);
-			sandbox_check_access(&(b));
 			b += k[2] + (((uint32_t)k[3])<<16);
-			sandbox_check_access(&(c));
 			c += k[4] + (((uint32_t)k[5])<<16);
 			mix(a,b,c);
-			sandbox_check_access(&(length));
 			length -= 12;
-			sandbox_check_access(&(k));
 			k += 6;
 		}
 
 		/*----------------------------- handle the last (probably partial) block */
-		sandbox_check_access(&(k8));
 		k8 = (const uint8_t *)k;
 		switch(length)
 		{
-		case 12: sandbox_check_access(&(c));
-			 c+=k[4]+(((uint32_t)k[5])<<16);
-			 sandbox_check_access(&(b));
+		case 12: c+=k[4]+(((uint32_t)k[5])<<16);
 			 b+=k[2]+(((uint32_t)k[3])<<16);
-			 sandbox_check_access(&(a));
 			 a+=k[0]+(((uint32_t)k[1])<<16);
 			 break;
-		case 11: sandbox_check_access(&(c));
-			 c+=((uint32_t)k8[10])<<16;     /* fall through */
-		case 10: sandbox_check_access(&(c));
-			 c+=k[4];
-			 sandbox_check_access(&(b));
+		case 11: c+=((uint32_t)k8[10])<<16;     /* fall through */
+		case 10: c+=k[4];
 			 b+=k[2]+(((uint32_t)k[3])<<16);
-			 sandbox_check_access(&(a));
 			 a+=k[0]+(((uint32_t)k[1])<<16);
 			 break;
-		case 9 : sandbox_check_access(&(c));
-			 c+=k8[8];                      /* fall through */
-		case 8 : sandbox_check_access(&(b));
-			 b+=k[2]+(((uint32_t)k[3])<<16);
-			 sandbox_check_access(&(a));
+		case 9 : c+=k8[8];                      /* fall through */
+		case 8 : b+=k[2]+(((uint32_t)k[3])<<16);
 			 a+=k[0]+(((uint32_t)k[1])<<16);
 			 break;
-		case 7 : sandbox_check_access(&(b));
-			 b+=((uint32_t)k8[6])<<16;      /* fall through */
-		case 6 : sandbox_check_access(&(b));
-			 b+=k[2];
-			 sandbox_check_access(&(a));
+		case 7 : b+=((uint32_t)k8[6])<<16;      /* fall through */
+		case 6 : b+=k[2];
 			 a+=k[0]+(((uint32_t)k[1])<<16);
 			 break;
-		case 5 : sandbox_check_access(&(b));
-			 b+=k8[4];                      /* fall through */
-		case 4 : sandbox_check_access(&(a));
-			 a+=k[0]+(((uint32_t)k[1])<<16);
+		case 5 : b+=k8[4];                      /* fall through */
+		case 4 : a+=k[0]+(((uint32_t)k[1])<<16);
 			 break;
-		case 3 : sandbox_check_access(&(a));
-			 a+=((uint32_t)k8[2])<<16;      /* fall through */
-		case 2 : sandbox_check_access(&(a));
-			 a+=k[0];
+		case 3 : a+=((uint32_t)k8[2])<<16;      /* fall through */
+		case 2 : a+=k[0];
 			 break;
-		case 1 : sandbox_check_access(&(a));
-			 a+=k8[0];
+		case 1 : a+=k8[0];
 			 break;
 		case 0 : return c;                     /* zero length requires no mixing */
 		}
@@ -502,64 +397,38 @@ static uint32_t hashlittle(const void *key, size_t length, uint32_t initval)
 		/*--------------- all but the last block: affect some 32 bits of (a,b,c) */
 		while (length > 12)
 		{
-			sandbox_check_access(&(a));
 			a += k[0];
-			sandbox_check_access(&(a));
 			a += ((uint32_t)k[1])<<8;
-			sandbox_check_access(&(a));
 			a += ((uint32_t)k[2])<<16;
-			sandbox_check_access(&(a));
 			a += ((uint32_t)k[3])<<24;
-			sandbox_check_access(&(b));
 			b += k[4];
-			sandbox_check_access(&(b));
 			b += ((uint32_t)k[5])<<8;
-			sandbox_check_access(&(b));
 			b += ((uint32_t)k[6])<<16;
-			sandbox_check_access(&(b));
 			b += ((uint32_t)k[7])<<24;
-			sandbox_check_access(&(c));
 			c += k[8];
-			sandbox_check_access(&(c));
 			c += ((uint32_t)k[9])<<8;
-			sandbox_check_access(&(c));
 			c += ((uint32_t)k[10])<<16;
-			sandbox_check_access(&(c));
 			c += ((uint32_t)k[11])<<24;
 			mix(a,b,c);
-			sandbox_check_access(&(length));
 			length -= 12;
-			sandbox_check_access(&(k));
 			k += 12;
 		}
 
 		/*-------------------------------- last block: affect all 32 bits of (c) */
 		switch(length) /* all the case statements fall through */
 		{
-		case 12: sandbox_check_access(&(c));
-			c+=((uint32_t)k[11])<<24; /* FALLTHRU */
-		case 11: sandbox_check_access(&(c));
-			c+=((uint32_t)k[10])<<16; /* FALLTHRU */
-		case 10: sandbox_check_access(&(c));
-			c+=((uint32_t)k[9])<<8; /* FALLTHRU */
-		case 9 : sandbox_check_access(&(c));
-			c+=k[8]; /* FALLTHRU */
-		case 8 : sandbox_check_access(&(b));
-			b+=((uint32_t)k[7])<<24; /* FALLTHRU */
-		case 7 : sandbox_check_access(&(b));
-			b+=((uint32_t)k[6])<<16; /* FALLTHRU */
-		case 6 : sandbox_check_access(&(b));
-			 b+=((uint32_t)k[5])<<8; /* FALLTHRU */
-		case 5 : sandbox_check_access(&(b));
-			 b+=k[4]; /* FALLTHRU */
-		case 4 : sandbox_check_access(&(a));
-			 a+=((uint32_t)k[3])<<24; /* FALLTHRU */
-		case 3 : sandbox_check_access(&(a));
-			 a+=((uint32_t)k[2])<<16; /* FALLTHRU */
-		case 2 : sandbox_check_access(&(a));
-			 a+=((uint32_t)k[1])<<8; /* FALLTHRU */
-		case 1 : sandbox_check_access(&(a));
-			 a+=k[0];
+		case 12: c+=((uint32_t)k[11])<<24; /* FALLTHRU */
+		case 11: c+=((uint32_t)k[10])<<16; /* FALLTHRU */
+		case 10: c+=((uint32_t)k[9])<<8; /* FALLTHRU */
+		case 9 : c+=k[8]; /* FALLTHRU */
+		case 8 : b+=((uint32_t)k[7])<<24; /* FALLTHRU */
+		case 7 : b+=((uint32_t)k[6])<<16; /* FALLTHRU */
+		case 6 : b+=((uint32_t)k[5])<<8; /* FALLTHRU */
+		case 5 : b+=k[4]; /* FALLTHRU */
+		case 4 : a+=((uint32_t)k[3])<<24; /* FALLTHRU */
+		case 3 : a+=((uint32_t)k[2])<<16; /* FALLTHRU */
+		case 2 : a+=((uint32_t)k[1])<<8; /* FALLTHRU */
+		case 1 : a+=k[0];
 			 break;
 		case 0 : return c;
 		}
@@ -578,10 +447,8 @@ static unsigned long lh_perllike_str_hash(const void *k)
 	const char *rkey = (const char *)k;
 	unsigned hashval = 1;
 
-	while (*rkey) {
-		sandbox_check_access(&(hashval));
+	while (*rkey)
 		hashval = hashval * 33 + *rkey++;
-	}
 
 	return hashval;
 }
@@ -615,7 +482,6 @@ static unsigned long lh_char_hash(const void *k)
 		InterlockedCompareExchange(&random_seed, seed, -1);
 #else
 		//#warning "racy random seed initialization if used by multiple threads"
-		sandbox_check_access(&(random_seed));
 		random_seed = seed; /* potentially racy */
 #endif
 	}
@@ -636,37 +502,23 @@ struct lh_table *lh_table_new(int size, lh_entry_free_fn *free_fn, lh_hash_fn *h
 
 	/* Allocate space for elements to avoid divisions by zero. */
 	assert(size > 0);
-	sandbox_check_access(&(t));
 	t = (struct lh_table *)calloc(1, sizeof(struct lh_table));
-	sandbox_register_var(lh_table_new, t, t,
-			     (1) * (sizeof(struct lh_table)));
 	if (!t)
 		return NULL;
 
-	sandbox_check_access(&(t->count));
 	t->count = 0;
-	sandbox_check_access(&(t->size));
 	t->size = size;
-	sandbox_check_access(&(t->table));
 	t->table = (struct lh_entry *)calloc(size, sizeof(struct lh_entry));
-	sandbox_register_var(lh_table_new, t->table, t->table,
-			     (size) * (sizeof(struct lh_entry)));
 	if (!t->table)
 	{
-		sandbox_unregister_var(t);
 		free(t);
 		return NULL;
 	}
-	sandbox_check_access(&(t->free_fn));
 	t->free_fn = free_fn;
-	sandbox_check_access(&(t->hash_fn));
 	t->hash_fn = hash_fn;
-	sandbox_check_access(&(t->equal_fn));
 	t->equal_fn = equal_fn;
-	for (i = 0; i < size; i++) {
-		sandbox_check_access(&(t->table[i].k));
+	for (i = 0; i < size; i++)
 		t->table[i].k = LH_EMPTY;
-	}
 	return t;
 }
 
@@ -685,7 +537,6 @@ int lh_table_resize(struct lh_table *t, int new_size)
 	struct lh_table *new_t;
 	struct lh_entry *ent;
 
-	sandbox_check_access(&(new_t));
 	new_t = lh_table_new(new_size, NULL, t->hash_fn, t->equal_fn);
 	if (new_t == NULL)
 		return -1;
@@ -694,27 +545,19 @@ int lh_table_resize(struct lh_table *t, int new_size)
 	{
 		unsigned long h = lh_get_hash(new_t, ent->k);
 		unsigned int opts = 0;
-		if (ent->k_is_constant) {
-			sandbox_check_access(&(opts));
+		if (ent->k_is_constant)
 			opts = JSON_C_OBJECT_ADD_CONSTANT_KEY;
-		}
 		if (lh_table_insert_w_hash(new_t, ent->k, ent->v, h, opts) != 0)
 		{
 			lh_table_free(new_t);
 			return -1;
 		}
 	}
-	sandbox_unregister_var(t->table);
 	free(t->table);
-	sandbox_check_access(&(t->table));
 	t->table = new_t->table;
-	sandbox_check_access(&(t->size));
 	t->size = new_size;
-	sandbox_check_access(&(t->head));
 	t->head = new_t->head;
-	sandbox_check_access(&(t->tail));
 	t->tail = new_t->tail;
-	sandbox_unregister_var(new_t);
 	free(new_t);
 
 	return 0;
@@ -728,9 +571,7 @@ void lh_table_free(struct lh_table *t)
 		for (c = t->head; c != NULL; c = c->next)
 			t->free_fn(c);
 	}
-	sandbox_unregister_var(t->table);
 	free(t->table);
-	sandbox_unregister_var(t);
 	free(t);
 }
 
@@ -747,43 +588,31 @@ int lh_table_insert_w_hash(struct lh_table *t, const void *k, const void *v, con
 			return -1;
 	}
 
-	sandbox_check_access(&(n));
 	n = h % t->size;
 
 	while (1)
 	{
 		if (t->table[n].k == LH_EMPTY || t->table[n].k == LH_FREED)
 			break;
-		if ((int)++n == t->size) {
-			sandbox_check_access(&(n));
+		if ((int)++n == t->size)
 			n = 0;
-		}
 	}
 
-	sandbox_check_access(&(t->table[n].k));
 	t->table[n].k = k;
-	sandbox_check_access(&(t->table[n].k_is_constant));
 	t->table[n].k_is_constant = (opts & JSON_C_OBJECT_ADD_CONSTANT_KEY);
-	sandbox_check_access(&(t->table[n].v));
 	t->table[n].v = v;
 	t->count++;
 
 	if (t->head == NULL)
 	{
-		sandbox_check_access(&(t->head));
 		t->head = t->tail = &t->table[n];
-		sandbox_check_access(&(t->table[n].next));
 		t->table[n].next = t->table[n].prev = NULL;
 	}
 	else
 	{
-		sandbox_check_access(&(t->tail->next));
 		t->tail->next = &t->table[n];
-		sandbox_check_access(&(t->table[n].prev));
 		t->table[n].prev = t->tail;
-		sandbox_check_access(&(t->table[n].next));
 		t->table[n].next = NULL;
-		sandbox_check_access(&(t->tail));
 		t->tail = &t->table[n];
 	}
 
@@ -806,10 +635,8 @@ struct lh_entry *lh_table_lookup_entry_w_hash(struct lh_table *t, const void *k,
 			return NULL;
 		if (t->table[n].k != LH_FREED && t->equal_fn(t->table[n].k, k))
 			return &t->table[n];
-		if ((int)++n == t->size) {
-			sandbox_check_access(&(n));
+		if ((int)++n == t->size)
 			n = 0;
-		}
 		count++;
 	}
 	return NULL;
@@ -825,16 +652,12 @@ json_bool lh_table_lookup_ex(struct lh_table *t, const void *k, void **v)
 	struct lh_entry *e = lh_table_lookup_entry(t, k);
 	if (e != NULL)
 	{
-		if (v != NULL) {
-			sandbox_check_access(&(*v));
+		if (v != NULL)
 			*v = lh_entry_v(e);
-		}
 		return 1; /* key found */
 	}
-	if (v != NULL) {
-		sandbox_check_access(&(*v));
+	if (v != NULL)
 		*v = NULL;
-	}
 	return 0; /* key not found */
 }
 
@@ -854,37 +677,27 @@ int lh_table_delete_entry(struct lh_table *t, struct lh_entry *e)
 	t->count--;
 	if (t->free_fn)
 		t->free_fn(e);
-	sandbox_check_access(&(t->table[n].v));
 	t->table[n].v = NULL;
-	sandbox_check_access(&(t->table[n].k));
 	t->table[n].k = LH_FREED;
 	if (t->tail == &t->table[n] && t->head == &t->table[n])
 	{
-		sandbox_check_access(&(t->head));
 		t->head = t->tail = NULL;
 	}
 	else if (t->head == &t->table[n])
 	{
-		sandbox_check_access(&(t->head->next->prev));
 		t->head->next->prev = NULL;
-		sandbox_check_access(&(t->head));
 		t->head = t->head->next;
 	}
 	else if (t->tail == &t->table[n])
 	{
-		sandbox_check_access(&(t->tail->prev->next));
 		t->tail->prev->next = NULL;
-		sandbox_check_access(&(t->tail));
 		t->tail = t->tail->prev;
 	}
 	else
 	{
-		sandbox_check_access(&(t->table[n].prev->next));
 		t->table[n].prev->next = t->table[n].next;
-		sandbox_check_access(&(t->table[n].next->prev));
 		t->table[n].next->prev = t->table[n].prev;
 	}
-	sandbox_check_access(&(t->table[n].next));
 	t->table[n].next = t->table[n].prev = NULL;
 	return 0;
 }

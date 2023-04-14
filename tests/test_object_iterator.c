@@ -2,7 +2,6 @@
 #undef NDEBUG
 #endif
 #include "config.h"
-#include "sandbox.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,13 +26,9 @@ int main(int atgc, char **argv)
 	struct json_object_iterator it;
 	struct json_object_iterator itEnd;
 
-	sandbox_check_access(&(it));
 	it = json_object_iter_init_default();
-	sandbox_check_access(&(new_obj));
 	new_obj = json_tokener_parse(input);
-	sandbox_check_access(&(it));
 	it = json_object_iter_begin(new_obj);
-	sandbox_check_access(&(itEnd));
 	itEnd = json_object_iter_end(new_obj);
 
 	while (!json_object_iter_equal(&it, &itEnd))

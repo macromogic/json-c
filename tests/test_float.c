@@ -6,30 +6,24 @@
 #include "config.h"
 #include "json_object.h"
 #include "json_tokener.h"
-#include "sandbox.h"
 #include <stdio.h>
 int main(void)
 {
 	json_object *json;
 
-	sandbox_check_access(&(json));
 	json = json_object_new_double(1.0);
 	printf("json = %s\n", json_object_to_json_string_ext(json, JSON_C_TO_STRING_PRETTY));
 	json_object_put(json);
 
-	sandbox_check_access(&(json));
 	json = json_object_new_double(-1.0);
 	printf("json = %s\n", json_object_to_json_string_ext(json, JSON_C_TO_STRING_PRETTY));
 	json_object_put(json);
-	sandbox_check_access(&(json));
 	json = json_object_new_double(1.23);
 	printf("json = %s\n", json_object_to_json_string_ext(json, JSON_C_TO_STRING_PRETTY));
 	json_object_put(json);
-	sandbox_check_access(&(json));
 	json = json_object_new_double(123456789.0);
 	printf("json = %s\n", json_object_to_json_string_ext(json, JSON_C_TO_STRING_PRETTY));
 	json_object_put(json);
-	sandbox_check_access(&(json));
 	json = json_object_new_double(123456789.123);
 	printf("json = %s\n", json_object_to_json_string_ext(json, JSON_C_TO_STRING_PRETTY));
 	json_object_put(json);

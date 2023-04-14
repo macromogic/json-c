@@ -7,7 +7,6 @@
 #include <io.h>
 #include <windows.h>
 #endif /* defined(WIN32) */
-#include "sandbox.h"
 #include <fcntl.h>
 #include <limits.h>
 #include <stddef.h>
@@ -42,7 +41,6 @@ static void test_write_to_file(void)
 {
 	json_object *jso;
 
-	sandbox_check_access(&(jso));
 	jso = json_tokener_parse("{"
 	                         "\"foo\":1234,"
 	                         "\"foo1\":\"abcdefghijklmnopqrstuvwxyz\","
@@ -64,7 +62,6 @@ static void test_write_to_file(void)
 	putchar('\n');
 
 	const char *outfile2 = "json2.out";
-	sandbox_check_access(&(rv));
 	rv = json_object_to_file_ext(outfile2, jso, JSON_C_TO_STRING_PRETTY);
 	printf("%s: json_object_to_file_ext(%s, jso, JSON_C_TO_STRING_PRETTY)=%d\n",
 	       (rv == 0) ? "OK" : "FAIL", outfile2, rv);
@@ -78,12 +75,10 @@ static void test_write_to_file(void)
 		printf("FAIL: unable to open %s %s\n", outfile3, strerror(errno));
 		return;
 	}
-	sandbox_check_access(&(rv));
 	rv = json_object_to_fd(d, jso, JSON_C_TO_STRING_PRETTY);
 	printf("%s: json_object_to_fd(%s, jso, JSON_C_TO_STRING_PRETTY)=%d\n",
 	       (rv == 0) ? "OK" : "FAIL", outfile3, rv);
 	// Write the same object twice
-	sandbox_check_access(&(rv));
 	rv = json_object_to_fd(d, jso, JSON_C_TO_STRING_PLAIN);
 	printf("%s: json_object_to_fd(%s, jso, JSON_C_TO_STRING_PLAIN)=%d\n",
 	       (rv == 0) ? "OK" : "FAIL", outfile3, rv);
@@ -119,15 +114,12 @@ static void stat_and_cat(const char *file)
 	if (read(d, buf, sb.st_size) < sb.st_size)
 	{
 		printf("FAIL: unable to read all of %s: %s\n", file, strerror(errno));
-		sandbox_unregister_var(buf);
 		free(buf);
 		close(d);
 		return;
 	}
-	sandbox_check_access(&(buf[sb.st_size]));
 	buf[sb.st_size] = '\0';
 	printf("file[%s], size=%d, contents=%s\n", file, (int)sb.st_size, buf);
-	sandbox_unregister_var(buf);
 	free(buf);
 	close(d);
 }
@@ -146,7 +138,6 @@ int main(int argc, char **argv)
 		        argv[0]);
 		return EXIT_FAILURE;
 	}
-	sandbox_check_access(&(testdir));
 	testdir = argv[1];
 
 	//	Test json_c_version.c
@@ -226,7 +217,6 @@ static void test_read_valid_nested_with_fd(const char *testdir)
 
 	(void)lseek(d, SEEK_SET, 0);
 
-	sandbox_check_access(&(jso));
 	jso = json_object_from_fd_ex(d, 3);
 	if (jso != NULL)
 	{

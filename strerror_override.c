@@ -1,5 +1,4 @@
 #define STRERROR_OVERRIDE_IMPL 1
-#include "sandbox.h"
 #include "strerror_override.h"
 
 /*
@@ -71,10 +70,8 @@ char *_json_c_strerror(int errno_in)
 	char digbuf[20];
 	int ii, jj;
 
-	if (!_json_c_strerror_enable) {
-		sandbox_check_access(&(_json_c_strerror_enable));
+	if (!_json_c_strerror_enable)
 		_json_c_strerror_enable = (getenv("_JSON_C_STRERROR_ENABLE") == NULL) ? -1 : 1;
-	}
 	if (_json_c_strerror_enable == -1)
 		return strerror(errno_in);
 
@@ -90,10 +87,8 @@ char *_json_c_strerror(int errno_in)
 		for (start_idx = sizeof(PREFIX) - 1, jj = 0; errno_str[jj] != '\0';
 		     jj++, start_idx++)
 		{
-			sandbox_check_access(&(errno_buf[start_idx]));
 			errno_buf[start_idx] = errno_str[jj];
 		}
-		sandbox_check_access(&(errno_buf[start_idx]));
 		errno_buf[start_idx] = '\0';
 		return errno_buf;
 	}
@@ -101,19 +96,15 @@ char *_json_c_strerror(int errno_in)
 	// It's not one of the known errno values, return the numeric value.
 	for (ii = 0; errno_in >= 10; errno_in /= 10, ii++)
 	{
-		sandbox_check_access(&(digbuf[ii]));
 		digbuf[ii] = "0123456789"[(errno_in % 10)];
 	}
-	sandbox_check_access(&(digbuf[ii]));
 	digbuf[ii] = "0123456789"[(errno_in % 10)];
 
 	// Reverse the digits
 	for (start_idx = sizeof(PREFIX) - 1; ii >= 0; ii--, start_idx++)
 	{
-		sandbox_check_access(&(errno_buf[start_idx]));
 		errno_buf[start_idx] = digbuf[ii];
 	}
-	sandbox_check_access(&(errno_buf[start_idx]));
 	errno_buf[start_idx] = '\0';
 	return errno_buf;
 }

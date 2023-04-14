@@ -11,7 +11,6 @@
 */
 #include "config.h"
 
-#include "sandbox.h"
 #include <stddef.h>
 
 #include "json.h"
@@ -67,13 +66,11 @@ struct json_object_iterator json_object_iter_begin(struct json_object *obj)
 
 	/// @note json_object_get_object will return NULL if passed NULL
 	///       or a non-json_type_object instance
-	sandbox_check_access(&(pTable));
 	pTable = json_object_get_object(obj);
 	JASSERT(NULL != pTable);
 
 	/// @note For a pair-less Object, head is NULL, which matches our
 	///       definition of the "end" iterator
-	sandbox_check_access(&(iter.opaque_));
 	iter.opaque_ = lh_table_head(pTable);
 	return iter;
 }
@@ -88,7 +85,6 @@ struct json_object_iterator json_object_iter_end(const struct json_object *obj)
 	JASSERT(NULL != obj);
 	JASSERT(json_object_is_type(obj, json_type_object));
 
-	sandbox_check_access(&(iter.opaque_));
 	iter.opaque_ = kObjectEndIterValue;
 
 	return iter;
@@ -102,7 +98,6 @@ void json_object_iter_next(struct json_object_iterator *iter)
 	JASSERT(NULL != iter);
 	JASSERT(kObjectEndIterValue != iter->opaque_);
 
-	sandbox_check_access(&(iter->opaque_));
 	iter->opaque_ = lh_entry_next(((const struct lh_entry *)iter->opaque_));
 }
 
@@ -152,7 +147,6 @@ struct json_object_iterator json_object_iter_init_default(void)
 	 *       accidental access to it would likely be trapped by the
 	 *       hardware as an invalid address.
 	 */
-	sandbox_check_access(&(iter.opaque_));
 	iter.opaque_ = NULL;
 
 	return iter;

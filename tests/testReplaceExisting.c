@@ -1,7 +1,6 @@
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
-#include "sandbox.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,7 +41,6 @@ int main(int argc, char **argv)
 	printf("==== replace-value first loop starting ====\n");
 
 	const char *original_key = NULL;
-	sandbox_check_access(&(orig_count));
 	orig_count = 0;
 	json_object_object_foreach(my_object, key, val)
 	{
@@ -51,7 +49,6 @@ int main(int argc, char **argv)
 		if (strcmp(key, "foo2") != 0)
 			continue;
 		printf("replacing value for key [%s]\n", key);
-		sandbox_check_access(&(original_key));
 		original_key = key;
 		json_object_object_add(my_object, key, json_object_new_string("zzz"));
 	}
@@ -68,16 +65,13 @@ int main(int argc, char **argv)
 			continue;
 		printf("pointer for key [%s] does %smatch\n", key2,
 		       (key2 == original_key) ? "" : "NOT ");
-		if (key2 != original_key) {
-			sandbox_check_access(&(retval));
+		if (key2 != original_key)
 			retval = 1;
-		}
 	}
 	if (new_count != orig_count)
 	{
 		printf("mismatch between original count (%d) and new count (%d)\n", orig_count,
 		       new_count);
-		sandbox_check_access(&(retval));
 		retval = 1;
 	}
 

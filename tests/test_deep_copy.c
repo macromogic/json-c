@@ -1,4 +1,3 @@
-#include "sandbox.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -98,7 +97,6 @@ int my_shallow_copy(json_object *src, json_object *parent, const char *key, size
                     json_object **dst)
 {
 	int rc;
-	sandbox_check_access(&(rc));
 	rc = json_c_shallow_copy_default(src, parent, key, index, dst);
 	if (rc < 0)
 		return rc;
@@ -120,15 +118,11 @@ int main(int argc, char **argv)
 
 	if (argc > 1 && strcmp(argv[1], "--benchmark") == 0)
 	{
-		sandbox_check_access(&(benchmark));
 		benchmark = 1;
 	}
 
-	sandbox_check_access(&(src1));
 	src1 = json_tokener_parse(json_str1);
-	sandbox_check_access(&(src2));
 	src2 = json_tokener_parse(json_str2);
-	sandbox_check_access(&(src3));
 	src3 = json_tokener_parse(json_str3);
 
 	assert(src1 != NULL);
@@ -202,7 +196,6 @@ int main(int argc, char **argv)
 	char udata[] = "dummy userdata";
 	json_object_set_serializer(with_serializer, my_custom_serializer, udata, NULL);
 	json_object_object_add(src1, "with_serializer", with_serializer);
-	sandbox_check_access(&(dst1));
 	dst1 = NULL;
 	/* With a custom serializer in use, a custom shallow_copy function must also be used */
 	assert(-1 == json_object_deep_copy(src1, &dst1, NULL));
@@ -244,11 +237,9 @@ static void do_benchmark(json_object *src2)
 	int iterations = 1000000;
 	time_t start = time(NULL);
 
-	sandbox_check_access(&(start));
 	start = time(NULL);
 	for (ii = 0; ii < iterations; ii++)
 	{
-		sandbox_check_access(&(dst2));
 		dst2 = json_tokener_parse(json_object_get_string(src2));
 		json_object_put(dst2);
 	}
@@ -256,15 +247,12 @@ static void do_benchmark(json_object *src2)
 	       "json_tokener_parse(json_object_get_string(src2))' took %d seconds\n",
 	       iterations, (int)(time(NULL) - start));
 
-	sandbox_check_access(&(start));
 	start = time(NULL);
-	sandbox_check_access(&(dst2));
 	dst2 = NULL;
 	for (ii = 0; ii < iterations; ii++)
 	{
 		json_object_deep_copy(src2, &dst2, NULL);
 		json_object_put(dst2);
-		sandbox_check_access(&(dst2));
 		dst2 = NULL;
 	}
 	printf("BENCHMARK - %d iterations of 'json_object_deep_copy(src2, &dst2, NULL)' took %d "

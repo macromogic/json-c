@@ -6,7 +6,6 @@
 #undef NDEBUG
 #endif
 #include "config.h"
-#include "sandbox.h"
 #include <stdio.h>
 
 #include "json_object.h"
@@ -24,7 +23,6 @@ int main(int argc, char **argv)
 	printf("obj.to_string(standard)=%s\n", json_object_to_json_string(obj));
 
 	printf("Test default serializer with custom userdata:\n");
-	sandbox_check_access(&(obj->_userdata));
 	obj->_userdata = udata;
 	printf("obj.to_string(userdata)=%s\n", json_object_to_json_string(obj));
 
@@ -38,14 +36,12 @@ int main(int argc, char **argv)
 
 	json_object_put(obj);
 	printf("Test no zero reset serializer:\n");
-	sandbox_check_access(&(obj));
 	obj = json_object_new_double(3.1415000);
 	char data[] = "%.17g";
 	json_object_set_serializer(obj, json_object_double_to_json_string, data, NULL);
 	printf("obj.to_string(reset)=%s\n", json_object_to_json_string_ext(obj, 4));
 
 	json_object_put(obj);
-	sandbox_check_access(&(obj));
 	obj = json_object_new_double(0.52381);
 
 	printf("obj.to_string(default format)=%s\n", json_object_to_json_string(obj));
@@ -75,7 +71,6 @@ int main(int argc, char **argv)
 
 	json_object_put(obj);
 
-	sandbox_check_access(&(obj));
 	obj = json_object_new_double(12.0);
 	printf("obj(12.0).to_string(default format)=%s\n", json_object_to_json_string(obj));
 	if (json_c_set_serialization_double_format("%.0f", JSON_C_OPTION_GLOBAL) < 0)
@@ -96,24 +91,20 @@ int main(int argc, char **argv)
 
 	json_object_put(obj);
 
-	sandbox_check_access(&(obj));
 	obj = json_object_new_double(-12.0);
 	printf("obj(-12.0).to_string(default format)=%s\n", json_object_to_json_string(obj));
 	json_object_put(obj);
 
 	/* Test NaN handling */
-	sandbox_check_access(&(obj));
 	obj = json_object_new_double(zero_dot_zero / zero_dot_zero);
 	printf("obj(0.0/0.0)=%s\n", json_object_to_json_string(obj));
 	json_object_put(obj);
 
 	/* Test Infinity and -Infinity handling */
-	sandbox_check_access(&(obj));
 	obj = json_object_new_double(1.0 / zero_dot_zero);
 	printf("obj(1.0/0.0)=%s\n", json_object_to_json_string(obj));
 	json_object_put(obj);
 
-	sandbox_check_access(&(obj));
 	obj = json_object_new_double(-1.0 / zero_dot_zero);
 	printf("obj(-1.0/0.0)=%s\n", json_object_to_json_string(obj));
 	json_object_put(obj);

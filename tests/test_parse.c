@@ -1,7 +1,6 @@
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
-#include "sandbox.h"
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -46,39 +45,30 @@ static void single_incremental_parse(const char *test_string, int clear_serializ
 	json_object *all_at_once_obj, *new_obj;
 	const char *all_at_once_str, *new_str;
 
-	sandbox_check_access(&(new_obj));
 	new_obj = NULL;
 	assert(chunksize > 0);
-	sandbox_check_access(&(all_at_once_obj));
 	all_at_once_obj = json_tokener_parse(test_string);
 	if (clear_serializer)
 		do_clear_serializer(all_at_once_obj);
-	sandbox_check_access(&(all_at_once_str));
 	all_at_once_str = json_object_to_json_string(all_at_once_obj);
 
-	sandbox_check_access(&(tok));
 	tok = json_tokener_new();
 	size_t test_string_len = strlen(test_string) + 1; // Including '\0' !
 	for (ii = 0; ii < test_string_len; ii += chunksize)
 	{
 		int len_to_parse = chunksize;
-		if (ii + chunksize > test_string_len) {
-			sandbox_check_access(&(len_to_parse));
+		if (ii + chunksize > test_string_len)
 			len_to_parse = test_string_len - ii;
-		}
 
 		if (getenv("TEST_PARSE_DEBUG") != NULL)
 			printf(" chunk: %.*s\n", len_to_parse, &test_string[ii]);
-		sandbox_check_access(&(new_obj));
 		new_obj = json_tokener_parse_ex(tok, &test_string[ii], len_to_parse);
-		sandbox_check_access(&(jerr));
 		jerr = json_tokener_get_error(tok);
 		if (jerr != json_tokener_continue || new_obj)
 			break;
 	}
 	if (clear_serializer && new_obj)
 		do_clear_serializer(new_obj);
-	sandbox_check_access(&(new_str));
 	new_str = json_object_to_json_string(new_obj);
 
 	if (strcmp(all_at_once_str, new_str) != 0)
@@ -97,7 +87,6 @@ static void single_basic_parse(const char *test_string, int clear_serializer)
 {
 	json_object *new_obj;
 
-	sandbox_check_access(&(new_obj));
 	new_obj = json_tokener_parse(test_string);
 	if (clear_serializer)
 		do_clear_serializer(new_obj);
@@ -242,19 +231,15 @@ static void test_verbose_parse(void)
 	json_object *new_obj;
 	enum json_tokener_error error = json_tokener_success;
 
-	sandbox_check_access(&(new_obj));
 	new_obj = json_tokener_parse_verbose("{ foo }", &error);
 	assert(error == json_tokener_error_parse_object_key_name);
 	assert(new_obj == NULL);
 
-	sandbox_check_access(&(new_obj));
 	new_obj = json_tokener_parse("{ foo }");
 	assert(new_obj == NULL);
 
-	sandbox_check_access(&(new_obj));
 	new_obj = json_tokener_parse("foo");
 	assert(new_obj == NULL);
-	sandbox_check_access(&(new_obj));
 	new_obj = json_tokener_parse_verbose("foo", &error);
 	assert(new_obj == NULL);
 
@@ -622,25 +607,20 @@ static void test_incremental_parse(void)
 	int ii;
 	int num_ok, num_error;
 
-	sandbox_check_access(&(num_ok));
 	num_ok = 0;
-	sandbox_check_access(&(num_error));
 	num_error = 0;
 
 	printf("Starting incremental tests.\n");
 	printf("Note: quotes and backslashes seen in the output here are literal values passed\n");
 	printf("     to the parse functions.  e.g. this is 4 characters: \"\\f\"\n");
 
-	sandbox_check_access(&(string_to_parse));
 	string_to_parse = "{ \"foo"; /* } */
 	printf("json_tokener_parse(%s) ... ", string_to_parse);
-	sandbox_check_access(&(new_obj));
 	new_obj = json_tokener_parse(string_to_parse);
 	if (new_obj == NULL)
 		puts("got error as expected");
 
 	/* test incremental parsing in various forms */
-	sandbox_check_access(&(tok));
 	tok = json_tokener_new();
 	for (ii = 0; incremental_steps[ii].string_to_parse != NULL; ii++)
 	{
@@ -651,25 +631,17 @@ static void test_incremental_parse(void)
 
 		json_tokener_set_flags(tok, step->tok_flags);
 
-		if (length == -1) {
-			sandbox_check_access(&(length));
+		if (length == -1)
 			length = (int)strlen(step->string_to_parse);
-		}
-		if (step->char_offset == -1) {
-			sandbox_check_access(&(expected_char_offset));
+		if (step->char_offset == -1)
 			expected_char_offset = length;
-		}
-		else {
-			sandbox_check_access(&(expected_char_offset));
+		else
 			expected_char_offset = step->char_offset;
-		}
 
 		printf("json_tokener_parse_ex(tok, %-12s, %3d) ... ", step->string_to_parse,
 		       length);
-		sandbox_check_access(&(new_obj));
 		new_obj = json_tokener_parse_ex(tok, step->string_to_parse, length);
 
-		sandbox_check_access(&(jerr));
 		jerr = json_tokener_get_error(tok);
 		if (step->expected_error != json_tokener_success)
 		{
@@ -686,7 +658,6 @@ static void test_incremental_parse(void)
 			{
 				printf("OK: got correct error: %s\n",
 				       json_tokener_error_desc(jerr));
-				sandbox_check_access(&(this_step_ok));
 				this_step_ok = 1;
 			}
 		}
@@ -704,7 +675,6 @@ static void test_incremental_parse(void)
 				printf("OK: got object of type [%s]: %s\n",
 				       json_type_to_name(json_object_get_type(new_obj)),
 				       json_object_to_json_string(new_obj));
-				sandbox_check_access(&(this_step_ok));
 				this_step_ok = 1;
 			}
 		}

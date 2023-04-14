@@ -11,7 +11,6 @@
 
 #include "config.h"
 
-#include "sandbox.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,7 +35,6 @@ static int _debug = 0;
 
 void mc_set_debug(int debug)
 {
-	sandbox_check_access(&(_debug));
 	_debug = debug;
 }
 int mc_get_debug(void)
@@ -46,7 +44,6 @@ int mc_get_debug(void)
 
 extern void mc_set_syslog(int syslog)
 {
-	sandbox_check_access(&(_syslog));
 	_syslog = syslog;
 }
 

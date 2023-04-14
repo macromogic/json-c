@@ -1,7 +1,6 @@
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
-#include "sandbox.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -19,7 +18,6 @@ int main(int argc, char **argv)
 	assert(json_object_get_int64(tmp) == 321321321);
 	json_object_put(tmp);
 	printf("INT64 PASSED\n");
-	sandbox_check_access(&(tmp));
 	tmp = json_object_new_uint64(123);
 	assert(json_object_get_boolean(tmp) == 1);
 	assert(json_object_get_int(tmp) == 123);
@@ -33,7 +31,6 @@ int main(int argc, char **argv)
 	assert(json_object_get_uint64(tmp) == 9223372036854775808U);
 	json_object_put(tmp);
 	printf("UINT64 PASSED\n");
-	sandbox_check_access(&(tmp));
 	tmp = json_object_new_boolean(1);
 	assert(json_object_get_boolean(tmp) == 1);
 	json_object_set_boolean(tmp, 0);
@@ -42,7 +39,6 @@ int main(int argc, char **argv)
 	assert(json_object_get_boolean(tmp) == 1);
 	json_object_put(tmp);
 	printf("BOOL PASSED\n");
-	sandbox_check_access(&(tmp));
 	tmp = json_object_new_double(12.34);
 	assert(json_object_get_double(tmp) == 12.34);
 	json_object_set_double(tmp, 34.56);
@@ -63,7 +59,6 @@ int main(int argc, char **argv)
 #define MID "A MID STRING"
 //             12345678901234567890123456789012....
 #define HUGE "A string longer than 32 chars as to check non local buf codepath"
-	sandbox_check_access(&(tmp));
 	tmp = json_object_new_string(MID);
 	assert(strcmp(json_object_get_string(tmp), MID) == 0);
 	assert(strcmp(json_object_to_json_string(tmp), "\"" MID "\"") == 0);
@@ -93,7 +88,6 @@ int main(int argc, char **argv)
 #define DOUBLE_STR "123.123STR"
 #define DOUBLE_OVER "1.8E+308"
 #define DOUBLE_OVER_NEGATIVE "-1.8E+308"
-	sandbox_check_access(&(tmp));
 	tmp = json_object_new_string(STR);
 	assert(json_object_get_double(tmp) == 0.0);
 	json_object_set_string(tmp, DOUBLE);
@@ -109,7 +103,6 @@ int main(int argc, char **argv)
 	json_object_put(tmp);
 	printf("STRINGTODOUBLE PASSED\n");
 
-	sandbox_check_access(&(tmp));
 	tmp = json_tokener_parse("1.234");
 	json_object_set_double(tmp, 12.3);
 	const char *serialized = json_object_to_json_string(tmp);

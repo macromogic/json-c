@@ -1,7 +1,6 @@
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
-#include "sandbox.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -20,7 +19,6 @@ static void freeit(json_object *jso, void *userdata)
 	struct myinfo *info = userdata;
 	printf("freeit, value=%d\n", info->value);
 	// Don't actually free anything here, the userdata is stack allocated.
-	sandbox_check_access(&(freeit_was_called));
 	freeit_was_called = 1;
 }
 static int custom_serializer(struct json_object *o, struct printbuf *pb, int level, int flags)
@@ -36,7 +34,6 @@ int main(int argc, char **argv)
 	MC_SET_DEBUG(1);
 
 	printf("Test setting, then resetting a custom serializer:\n");
-	sandbox_check_access(&(my_object));
 	my_object = json_object_new_object();
 	json_object_object_add(my_object, "abc", json_object_new_int(12));
 	json_object_object_add(my_object, "foo", json_object_new_string("bar"));
@@ -50,7 +47,6 @@ int main(int argc, char **argv)
 	       json_object_to_json_string(my_object));
 
 	printf("Next line of output should be from the custom freeit function:\n");
-	sandbox_check_access(&(freeit_was_called));
 	freeit_was_called = 0;
 	json_object_set_serializer(my_object, NULL, NULL, NULL);
 	assert(freeit_was_called);
@@ -61,7 +57,6 @@ int main(int argc, char **argv)
 
 	// ============================================
 
-	sandbox_check_access(&(my_object));
 	my_object = json_object_new_object();
 	printf("Check that the custom serializer isn't free'd until the last json_object_put:\n");
 	json_object_set_serializer(my_object, custom_serializer, &userdata, freeit);
@@ -71,16 +66,13 @@ int main(int argc, char **argv)
 	       json_object_to_json_string(my_object));
 	printf("Next line of output should be from the custom freeit function:\n");
 
-	sandbox_check_access(&(freeit_was_called));
 	freeit_was_called = 0;
 	json_object_put(my_object);
 	assert(freeit_was_called);
 
 	// ============================================
 
-	sandbox_check_access(&(my_object));
 	my_object = json_object_new_object();
-	sandbox_check_access(&(my_sub_object));
 	my_sub_object = json_object_new_double(1.0);
 	json_object_object_add(my_object, "double", my_sub_object);
 	printf("Check that the custom serializer does not include nul byte:\n");

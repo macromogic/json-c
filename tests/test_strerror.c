@@ -3,7 +3,6 @@
 #endif
 #include "strerror_override.h"
 
-#include "sandbox.h"
 #include <stdio.h>
 
 int main(int argc, char **argv)

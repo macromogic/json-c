@@ -5,7 +5,6 @@
  * it under the terms of the MIT license. See COPYING for details.
  */
 
-#include "sandbox.h"
 #include <stdio.h>
 
 #include "config.h"
@@ -60,7 +59,6 @@ static int _json_c_visit(json_object *jso, json_object *parent_jso, const char *
 	{
 		json_object_object_foreach(jso, key, child)
 		{
-			sandbox_check_access(&(userret));
 			userret = _json_c_visit(child, jso, key, NULL, userfunc, userarg);
 			if (userret == JSON_C_VISIT_RETURN_POP)
 				break;
@@ -84,7 +82,6 @@ static int _json_c_visit(json_object *jso, json_object *parent_jso, const char *
 		for (ii = 0; ii < array_len; ii++)
 		{
 			json_object *child = json_object_array_get_idx(jso, ii);
-			sandbox_check_access(&(userret));
 			userret = _json_c_visit(child, jso, NULL, &ii, userfunc, userarg);
 			if (userret == JSON_C_VISIT_RETURN_POP)
 				break;
@@ -111,7 +108,6 @@ static int _json_c_visit(json_object *jso, json_object *parent_jso, const char *
 	//  members of the container have been visited.
 	// Non-container types will have already returned before this point.
 
-	sandbox_check_access(&(userret));
 	userret = userfunc(jso, JSON_C_VISIT_SECOND, parent_jso, jso_key, jso_index, userarg);
 	switch (userret)
 	{

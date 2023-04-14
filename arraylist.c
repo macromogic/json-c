@@ -11,7 +11,6 @@
 
 #include "config.h"
 
-#include "sandbox.h"
 #include <limits.h>
 
 #ifdef STDC_HEADERS
@@ -48,21 +47,14 @@ struct array_list *array_list_new2(array_list_free_fn *free_fn, int initial_size
 
 	if (initial_size < 0 || (size_t)initial_size >= SIZE_T_MAX / sizeof(void *))
 		return NULL;
-	sandbox_check_access(&(arr));
 	arr = (struct array_list *)malloc(sizeof(struct array_list));
-	sandbox_register_var(array_list_new2, arr, arr,
-			     sizeof(struct array_list));
 	if (!arr)
 		return NULL;
-	sandbox_check_access(&(arr->size));
 	arr->size = initial_size;
-	sandbox_check_access(&(arr->length));
 	arr->length = 0;
-	sandbox_check_access(&(arr->free_fn));
 	arr->free_fn = free_fn;
 	if (!(arr->array = (void **)malloc(arr->size * sizeof(void *))))
 	{
-		sandbox_unregister_var(arr);
 		free(arr);
 		return NULL;
 	}
@@ -75,9 +67,7 @@ extern void array_list_free(struct array_list *arr)
 	for (i = 0; i < arr->length; i++)
 		if (arr->array[i])
 			arr->free_fn(arr->array[i]);
-	sandbox_unregister_var(arr->array);
 	free(arr->array);
-	sandbox_unregister_var(arr);
 	free(arr);
 }
 
@@ -96,26 +86,19 @@ static int array_list_expand_internal(struct array_list *arr, size_t max)
 	if (max < arr->size)
 		return 0;
 	/* Avoid undefined behaviour on size_t overflow */
-	if (arr->size >= SIZE_T_MAX / 2) {
-		sandbox_check_access(&(new_size));
+	if (arr->size >= SIZE_T_MAX / 2)
 		new_size = max;
-	}
 	else
 	{
-		sandbox_check_access(&(new_size));
 		new_size = arr->size << 1;
-		if (new_size < max) {
-			sandbox_check_access(&(new_size));
+		if (new_size < max)
 			new_size = max;
-		}
 	}
 	if (new_size > (~((size_t)0)) / sizeof(void *))
 		return -1;
 	if (!(t = realloc(arr->array, new_size * sizeof(void *))))
 		return -1;
-	sandbox_check_access(&(arr->array));
 	arr->array = (void **)t;
-	sandbox_check_access(&(arr->size));
 	arr->size = new_size;
 	return 0;
 }
@@ -127,22 +110,17 @@ int array_list_shrink(struct array_list *arr, size_t empty_slots)
 
 	if (empty_slots >= SIZE_T_MAX / sizeof(void *) - arr->length)
 		return -1;
-	sandbox_check_access(&(new_size));
 	new_size = arr->length + empty_slots;
 	if (new_size == arr->size)
 		return 0;
 	if (new_size > arr->size)
 		return array_list_expand_internal(arr, new_size);
-	if (new_size == 0) {
-		sandbox_check_access(&(new_size));
+	if (new_size == 0)
 		new_size = 1;
-	}
 
 	if (!(t = realloc(arr->array, new_size * sizeof(void *))))
 		return -1;
-	sandbox_check_access(&(arr->array));
 	arr->array = (void **)t;
-	sandbox_check_access(&(arr->size));
 	arr->size = new_size;
 	return 0;
 }
@@ -156,7 +134,6 @@ int array_list_put_idx(struct array_list *arr, size_t idx, void *data)
 		return -1;
 	if (idx < arr->length && arr->array[idx])
 		arr->free_fn(arr->array[idx]);
-	sandbox_check_access(&(arr->array[idx]));
 	arr->array[idx] = data;
 	if (idx > arr->length)
 	{
@@ -167,14 +144,10 @@ int array_list_put_idx(struct array_list *arr, size_t idx, void *data)
 		   only 5 elements longs, array[5] and array[6] need to be
 		   set to 0.
 		 */
-		sandbox_check_access_n(&(arr->array + arr->length),
-				       (idx - arr->length) * sizeof(void *));
 		memset(arr->array + arr->length, 0, (idx - arr->length) * sizeof(void *));
 	}
-	if (arr->length <= idx) {
-		sandbox_check_access(&(arr->length));
+	if (arr->length <= idx)
 		arr->length = idx + 1;
-	}
 	return 0;
 }
 
@@ -188,7 +161,6 @@ int array_list_add(struct array_list *arr, void *data)
 		return -1;
 	if (array_list_expand_internal(arr, idx + 1))
 		return -1;
-	sandbox_check_access(&(arr->array[idx]));
 	arr->array[idx] = data;
 	arr->length++;
 	return 0;
@@ -217,7 +189,6 @@ int array_list_del_idx(struct array_list *arr, size_t idx, size_t count)
 	/* Avoid overflow in calculation with large indices. */
 	if (idx > SIZE_T_MAX - count)
 		return -1;
-	sandbox_check_access(&(stop));
 	stop = idx + count;
 	if (idx >= arr->length || stop > arr->length)
 		return -1;
@@ -228,10 +199,7 @@ int array_list_del_idx(struct array_list *arr, size_t idx, size_t count)
 		if (arr->array[i])
 			arr->free_fn(arr->array[i]);
 	}
-	sandbox_check_access_n(&(arr->array + idx),
-			       (arr->length - stop) * sizeof(void *));
 	memmove(arr->array + idx, arr->array + stop, (arr->length - stop) * sizeof(void *));
-	sandbox_check_access(&(arr->length));
 	arr->length -= count;
 	return 0;
 }

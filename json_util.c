@@ -14,7 +14,6 @@
 
 #include "strerror_override.h"
 
-#include "sandbox.h"
 #include <limits.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -96,11 +95,8 @@ struct json_object *json_object_from_fd_ex(int fd, int in_depth)
 		return NULL;
 	}
 
-	if (in_depth != -1) {
-		sandbox_check_access(&(depth));
+	if (in_depth != -1)
 		depth = in_depth;
-	}
-	sandbox_check_access(&(tok));
 	tok = json_tokener_new_ex(depth);
 	if (!tok)
 	{
@@ -134,7 +130,6 @@ struct json_object *json_object_from_fd_ex(int fd, int in_depth)
 		return NULL;
 	}
 
-	sandbox_check_access(&(obj));
 	obj = json_tokener_parse_ex(tok, pb->buf, printbuf_length(pb));
 	if (obj == NULL)
 		_json_c_set_last_err("json_tokener_parse_ex failed: %s\n",
@@ -156,7 +151,6 @@ struct json_object *json_object_from_file(const char *filename)
 		                     filename, strerror(errno));
 		return NULL;
 	}
-	sandbox_check_access(&(obj));
 	obj = json_object_from_fd(fd);
 	close(fd);
 	return obj;
@@ -181,12 +175,9 @@ int json_object_to_file_ext(const char *filename, struct json_object *obj, int f
 		                     filename, strerror(errno));
 		return -1;
 	}
-	sandbox_check_access(&(ret));
 	ret = _json_object_to_fd(fd, obj, flags, filename);
-	sandbox_check_access(&(saved_errno));
 	saved_errno = errno;
 	close(fd);
-	sandbox_check_access(&(errno));
 	errno = saved_errno;
 	return ret;
 }
@@ -207,7 +198,6 @@ static int _json_object_to_fd(int fd, struct json_object *obj, int flags, const 
 	const char *json_str;
 	size_t wpos, wsize;
 
-	sandbox_check_access(&(filename));
 	filename = filename ? filename : "(fd)";
 
 	if (!(json_str = json_object_to_json_string_ext(obj, flags)))
@@ -215,9 +205,7 @@ static int _json_object_to_fd(int fd, struct json_object *obj, int flags, const 
 		return -1;
 	}
 
-	sandbox_check_access(&(wsize));
 	wsize = strlen(json_str);
-	sandbox_check_access(&(wpos));
 	wpos = 0;
 	while (wpos < wsize)
 	{
@@ -229,7 +217,6 @@ static int _json_object_to_fd(int fd, struct json_object *obj, int flags, const 
 		}
 
 		/* because of the above check for ret < 0, we can safely cast and add */
-		sandbox_check_access(&(wpos));
 		wpos += (size_t)ret;
 	}
 
@@ -247,7 +234,6 @@ int json_object_to_file(const char *filename, struct json_object *obj)
 int json_parse_double(const char *buf, double *retval)
 {
 	char *end;
-	sandbox_check_access(&(*retval));
 	*retval = strtod(buf, &end);
 	return end == buf ? 1 : 0;
 }
@@ -257,17 +243,12 @@ int json_parse_int64(const char *buf, int64_t *retval)
 	char *end = NULL;
 	int64_t val;
 
-	sandbox_check_access(&(errno));
 	errno = 0;
-	sandbox_check_access(&(val));
 	val = strtoll(buf, &end, 10);
-	if (end != buf) {
-		sandbox_check_access(&(*retval));
+	if (end != buf)
 		*retval = val;
-	}
 	if ((val == 0 && errno != 0) || (end == buf))
 	{
-		sandbox_check_access(&(errno));
 		errno = EINVAL;
 		return 1;
 	}
@@ -279,22 +260,17 @@ int json_parse_uint64(const char *buf, uint64_t *retval)
 	char *end = NULL;
 	uint64_t val;
 
-	sandbox_check_access(&(errno));
 	errno = 0;
 	while (*buf == ' ')
 		buf++;
 	if (*buf == '-')
 		return 1; /* error: uint cannot be negative */
 
-	sandbox_check_access(&(val));
 	val = strtoull(buf, &end, 10);
-	if (end != buf) {
-		sandbox_check_access(&(*retval));
+	if (end != buf)
 		*retval = val;
-	}
 	if ((val == 0 && errno != 0) || (end == buf))
 	{
-		sandbox_check_access(&(errno));
 		errno = EINVAL;
 		return 1;
 	}
@@ -304,10 +280,8 @@ int json_parse_uint64(const char *buf, uint64_t *retval)
 #ifndef HAVE_REALLOC
 void *rpl_realloc(void *p, size_t n)
 {
-	if (n == 0) {
-		sandbox_check_access(&(n));
+	if (n == 0)
 		n = 1;
-	}
 	if (p == 0)
 		return malloc(n);
 	return realloc(p, n);

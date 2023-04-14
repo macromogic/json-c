@@ -18,7 +18,6 @@
 
 #endif
 
-#include "sandbox.h"
 #include "json_object.h"
 
 __warn_references(json_object_get, "Warning: please link against libjson-c instead of libjson");

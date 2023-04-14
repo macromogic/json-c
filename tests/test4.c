@@ -6,7 +6,6 @@
 #undef NDEBUG
 #endif
 #include "config.h"
-#include "sandbox.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,7 +78,6 @@ int main(void)
 		printf("parsed string bytes:   ");
 		print_hex(unjson);
 		puts("FAIL");
-		sandbox_check_access(&(retval));
 		retval = 1;
 	}
 	json_object_put(parse_result);

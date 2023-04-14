@@ -1,7 +1,6 @@
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
-#include "sandbox.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,11 +25,9 @@ int main(int argc, char **argv)
 	MC_SET_DEBUG(1);
 
 #ifdef TEST_FORMATTED
-	sandbox_check_access(&(sflags));
 	sflags = parse_flags(argc, argv);
 #endif
 
-	sandbox_check_access(&(new_obj));
 	new_obj = json_tokener_parse(
 	    "/* more difficult test case */"
 	    "{ \"glossary\": { \"title\": \"example glossary\", \"GlossDiv\": { \"title\": \"S\", "

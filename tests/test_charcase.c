@@ -1,7 +1,6 @@
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
-#include "sandbox.h"
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -28,19 +27,15 @@ static void test_case_parse(void)
 	struct json_tokener *tok;
 	json_object *new_obj;
 
-	sandbox_check_access(&(tok));
 	tok = json_tokener_new();
 	json_tokener_set_flags(tok, JSON_TOKENER_STRICT);
 
-	sandbox_check_access(&(new_obj));
 	new_obj = json_tokener_parse_ex(tok, "True", 4);
 	assert(new_obj == NULL);
 
-	sandbox_check_access(&(new_obj));
 	new_obj = json_tokener_parse_ex(tok, "False", 5);
 	assert(new_obj == NULL);
 
-	sandbox_check_access(&(new_obj));
 	new_obj = json_tokener_parse_ex(tok, "Null", 4);
 	assert(new_obj == NULL);
 
