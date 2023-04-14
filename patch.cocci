@@ -69,5 +69,5 @@ identifier fn =~ "memset|memmove|memcpy|strcpy";
 expression E, size;
 @@
 
-+ sandbox_check_access_n(&(E), size);
++ sandbox_check_access_n(E, size);
   fn(E, ..., size);
