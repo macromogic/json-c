@@ -237,12 +237,14 @@ int json_pointer_get(struct json_object *obj, const char *path, struct json_obje
 	}
 
 	/* pass a working copy to the recursive call */
-	if (!(path_copy = strdup(path)))
+	path_copy = strdup(path);
+	if (!path_copy)
 	{
 		sandbox_check_access(&(errno));
 		errno = ENOMEM;
 		return -1;
 	}
+	sandbox_register_var(json_pointer_get, path_copy, path_copy, strlen(path) + 1);
 	sandbox_check_access(&(rc));
 	rc = json_pointer_get_recursive(obj, path_copy, res);
 	sandbox_unregister_var(path_copy);
@@ -327,12 +329,14 @@ int json_pointer_set(struct json_object **obj, const char *path, struct json_obj
 	}
 
 	/* pass a working copy to the recursive call */
-	if (!(path_copy = strdup(path)))
+	path_copy = strdup(path);
+	if (!path_copy)
 	{
 		sandbox_check_access(&(errno));
 		errno = ENOMEM;
 		return -1;
 	}
+	sandbox_register_var(json_pointer_set, path_copy, path_copy, strlen(path) + 1);
 	sandbox_check_access(&(path_copy[endp - path]));
 	path_copy[endp - path] = '\0';
 	sandbox_check_access(&(rc));

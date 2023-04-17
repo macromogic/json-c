@@ -29,7 +29,6 @@ static void test_basic_printbuf_memset(void)
 	sandbox_check_access(&(pb));
 	pb = printbuf_new();
 	sprintbuf(pb, "blue:%d", 1);
-	sandbox_check_access_n(pb, 52);
 	printbuf_memset(pb, -1, 'x', 52);
 	printf("Buffer contents:%.*s\n", printbuf_length(pb), pb->buf);
 	printbuf_free(pb);
@@ -43,46 +42,30 @@ static void test_printbuf_memset_length(void)
 	printf("%s: starting test\n", __func__);
 	sandbox_check_access(&(pb));
 	pb = printbuf_new();
-	sandbox_check_access_n(pb, 0);
 	printbuf_memset(pb, -1, ' ', 0);
-	sandbox_check_access_n(pb, 0);
 	printbuf_memset(pb, -1, ' ', 0);
-	sandbox_check_access_n(pb, 0);
 	printbuf_memset(pb, -1, ' ', 0);
-	sandbox_check_access_n(pb, 0);
 	printbuf_memset(pb, -1, ' ', 0);
-	sandbox_check_access_n(pb, 0);
 	printbuf_memset(pb, -1, ' ', 0);
 	printf("Buffer length: %d\n", printbuf_length(pb));
-	sandbox_check_access_n(pb, 2);
 	printbuf_memset(pb, -1, ' ', 2);
-	sandbox_check_access_n(pb, 4);
 	printbuf_memset(pb, -1, ' ', 4);
-	sandbox_check_access_n(pb, 6);
 	printbuf_memset(pb, -1, ' ', 6);
 	printf("Buffer length: %d\n", printbuf_length(pb));
-	sandbox_check_access_n(pb, 6);
 	printbuf_memset(pb, -1, ' ', 6);
 	printf("Buffer length: %d\n", printbuf_length(pb));
-	sandbox_check_access_n(pb, 8);
 	printbuf_memset(pb, -1, ' ', 8);
-	sandbox_check_access_n(pb, 10);
 	printbuf_memset(pb, -1, ' ', 10);
-	sandbox_check_access_n(pb, 10);
 	printbuf_memset(pb, -1, ' ', 10);
-	sandbox_check_access_n(pb, 10);
 	printbuf_memset(pb, -1, ' ', 10);
-	sandbox_check_access_n(pb, 20);
 	printbuf_memset(pb, -1, ' ', 20);
 	printf("Buffer length: %d\n", printbuf_length(pb));
 
 	// No length change should occur
-	sandbox_check_access_n(pb, 30);
 	printbuf_memset(pb, 0, 'x', 30);
 	printf("Buffer length: %d\n", printbuf_length(pb));
 
 	// This should extend it by one.
-	sandbox_check_access_n(pb, printbuf_length(pb) + 1);
 	printbuf_memset(pb, 0, 'x', printbuf_length(pb) + 1);
 	printf("Buffer length: %d\n", printbuf_length(pb));
 

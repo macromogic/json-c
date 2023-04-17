@@ -471,12 +471,10 @@ static void indent(struct printbuf *pb, int level, int flags)
 	{
 		if (flags & JSON_C_TO_STRING_PRETTY_TAB)
 		{
-			sandbox_check_access_n(pb, level);
 			printbuf_memset(pb, -1, '\t', level);
 		}
 		else
 		{
-			sandbox_check_access_n(pb, level * 2);
 			printbuf_memset(pb, -1, ' ', level * 2);
 		}
 	}
@@ -598,6 +596,9 @@ int json_object_object_add_ex(struct json_object *jso, const char *const key,
 	{
 		const void *const k =
 		    (opts & JSON_C_OBJECT_ADD_CONSTANT_KEY) ? (const void *)key : strdup(key);
+		if (!(opts & JSON_C_OBJECT_KEY_IS_CONSTANT)) {
+			sandbox_register_var(json_object_object_add_ex, k, (void*)(uintptr_t)k, strlen(key) + 1);
+		}
 		if (k == NULL)
 			return -1;
 		return lh_table_insert_w_hash(JC_OBJECT(jso)->c_object, k, val, hash, opts);
@@ -1014,6 +1015,7 @@ int json_c_set_serialization_double_format(const char *double_format, int global
 				                     "out of memory\n");
 				return -1;
 			}
+			sandbox_register_var(json_c_set_serialization_double_format, p, p, strlen(double_format) + 1);
 			sandbox_check_access(&(global_serialization_float_format));
 			global_serialization_float_format = p;
 		}
@@ -1042,6 +1044,7 @@ int json_c_set_serialization_double_format(const char *double_format, int global
 				                     "out of memory\n");
 				return -1;
 			}
+			sandbox_register_var(json_c_set_serialization_double_format, p, p, strlen(double_format) + 1);
 			sandbox_check_access(&(tls_serialization_float_format));
 			tls_serialization_float_format = p;
 		}
@@ -1227,6 +1230,7 @@ struct json_object *json_object_new_double_s(double d, const char *ds)
 		errno = ENOMEM;
 		return NULL;
 	}
+	sandbox_register_var(json_object_new_double_s, new_ds, new_ds, strlen(new_ds) + 1);
 	json_object_set_serializer(jso, _json_object_userdata_to_json_string, new_ds,
 	                           json_object_free_userdata);
 	return jso;
@@ -1783,6 +1787,7 @@ static int json_object_copy_serializer_data(struct json_object *src, struct json
 			_json_c_set_last_err("json_object_copy_serializer_data: out of memory\n");
 			return -1;
 		}
+		sandbox_register_var(json_object_copy_serializer_data, p, p, strlen(src->_userdata) + 1);
 		sandbox_check_access(&(dst->_userdata));
 		dst->_userdata = p;
 	}

@@ -49,7 +49,9 @@ struct printbuf *printbuf_new(void)
 	p->size = 32;
 	sandbox_check_access(&(p->bpos));
 	p->bpos = 0;
-	if (!(p->buf = (char *)malloc(p->size)))
+	p->buf = (char *)malloc(p->size);
+	sandbox_register_var(printbuf_new, p, p->buf, (1) * (p->size));
+	if (!p->buf)
 	{
 		sandbox_unregister_var(p);
 		free(p);

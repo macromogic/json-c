@@ -111,6 +111,9 @@ void __sandbox_register_var(const char *filename, const char* varname, void *add
 
 void __sandbox_unregister_var(void *addr)
 {
+    if (!addr) {
+        return;
+    }
     cerr << "unregistering " << hex << addr << dec << "\n";
     uintptr_t addr_ = reinterpret_cast<uintptr_t>(addr);
     auto it = all_vars->lower_bound(addr_);

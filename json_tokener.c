@@ -1314,6 +1314,7 @@ struct json_object *json_tokener_parse_ex(struct json_tokener *tok, const char *
 					                        str - case_start);
 					sandbox_check_access(&(obj_field_name));
 					obj_field_name = strdup(tok->pb->buf);
+					sandbox_register_var(json_tokener_parse_ex, obj_field_name, obj_field_name, strlen(tok->pb->buf) + 1);
 					sandbox_check_access(&(saved_state));
 					saved_state = json_tokener_state_object_field_end;
 					sandbox_check_access(&(state));
