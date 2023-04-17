@@ -1,6 +1,5 @@
 #include <cassert>
 #include <fstream>
-#include <iostream>
 #include <map>
 #include <set>
 #include <string>
@@ -10,10 +9,15 @@
 
 #include "sandbox.h"
 
+#ifdef DEBUG
+#include <iostream>
+
 using std::cerr;
 using std::dec;
-using std::greater;
 using std::hex;
+#endif
+
+using std::greater;
 using std::map;
 using std::ifstream;
 using std::set;
@@ -87,7 +91,9 @@ void __sandbox_deinit()
 
 void __sandbox_register_var(const char *filename, const char* varname, void *addr, size_t size)
 {
+#ifdef DEBUG
     cerr << "registering " << filename << "::" << varname << " at " << hex << addr << dec << " of size " << size << "\n";
+#endif
     uintptr_t addr_ = reinterpret_cast<uintptr_t>(addr);
     string varname_(varname);
     size_t i = 0;
@@ -101,12 +107,13 @@ void __sandbox_register_var(const char *filename, const char* varname, void *add
     (*own_objs)[filename].insert(varname_);
     (*obj_vars)[varname_].insert(var);
     (*all_vars)[addr_] = var;
+#ifdef DEBUG
     cerr << "All vars:\n";
     for (auto& p : *all_vars) {
         cerr << p.second.filename << "::" << p.second.varname << " at " << hex << p.second.addr << dec << " of size " << p.second.size << "\n";
     }
     cerr << "\n";
-
+#endif
 }
 
 void __sandbox_unregister_var(void *addr)
@@ -114,7 +121,9 @@ void __sandbox_unregister_var(void *addr)
     if (!addr) {
         return;
     }
+#ifdef DEBUG
     cerr << "unregistering " << hex << addr << dec << "\n";
+#endif
     uintptr_t addr_ = reinterpret_cast<uintptr_t>(addr);
     auto it = all_vars->lower_bound(addr_);
     assert(it != all_vars->end());
@@ -122,11 +131,13 @@ void __sandbox_unregister_var(void *addr)
     const var_info& var = it->second;
     (*obj_vars)[var.varname].erase(var);
     all_vars->erase(it);
+#ifdef DEBUG
     cerr << "All vars:\n";
     for (auto& p : *all_vars) {
         cerr << p.second.filename << "::" << p.second.varname << " at " << hex << p.second.addr << dec << " of size " << p.second.size << "\n";
     }
     cerr << "\n";
+#endif
 }
 
 void __sandbox_check_access(const char *subject, void *addr, size_t size)
@@ -142,7 +153,7 @@ void __sandbox_check_access(const char *subject, void *addr, size_t size)
     auto it = all_vars->lower_bound(addr_);
     assert(it != all_vars->end());
     const var_info& var = it->second;
-    // assert((*perm_set)[subject].count(var.filename) > 0);
+#ifdef DEBUG
     if ((*perm_set)[subject].count(var.varname) == 0) {
         cerr << "Access violation: " << subject << " -> " << var.varname << " in " << var.filename << "\n";
         cerr << "Perm set for " << subject << ":\n";
@@ -151,7 +162,6 @@ void __sandbox_check_access(const char *subject, void *addr, size_t size)
         }
         abort();
     }
-    // assert(addr_ >= var.addr && addr_ + size <= var.addr + var.size);
     if (!(addr_ >= var.addr && addr_ + size <= var.addr + var.size)) {
         cerr << "Access violation: " << subject << " -> " << var.varname << " in " << var.filename << "\n";
         cerr << "Accessing: " << hex << addr_ << " of size " << size << dec << "\n";
@@ -162,6 +172,10 @@ void __sandbox_check_access(const char *subject, void *addr, size_t size)
         }
         abort();
     }
+#else
+    assert((*perm_set)[subject].count(var.filename) > 0);
+    assert(addr_ >= var.addr && addr_ + size <= var.addr + var.size);
+#endif
 }
 
 } // extern "C"
