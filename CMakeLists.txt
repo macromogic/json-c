@@ -444,14 +444,14 @@ foreach(ORIG_SRC ${ORIG_SOURCES})
     if(${ORIG_SRC_NAME} STREQUAL "linkhash")
         add_custom_command(
             OUTPUT ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c
-            COMMAND spatch --sp-file ${PROJECT_SOURCE_DIR}/patch.cocci ${ORIG_SRC} -o ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c
+            COMMAND spatch --sp-file ${PROJECT_SOURCE_DIR}/patch.cocci ${ORIG_SRC} -o ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c --allow-inconsistent-paths
             COMMAND sed -i -f ${PROJECT_SOURCE_DIR}/fixup.sed ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c
             DEPENDS ${ORIG_SRC} ${PROJECT_SOURCE_DIR}/patch.cocci ${PROJECT_SOURCE_DIR}/fixup.sed
         )
     else()
         add_custom_command(
             OUTPUT ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c
-            COMMAND spatch --sp-file ${PROJECT_SOURCE_DIR}/patch.cocci ${ORIG_SRC} -o ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c
+            COMMAND spatch --sp-file ${PROJECT_SOURCE_DIR}/patch.cocci ${ORIG_SRC} -o ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c --allow-inconsistent-paths
             DEPENDS ${ORIG_SRC} ${PROJECT_SOURCE_DIR}/patch.cocci
         )
     endif()

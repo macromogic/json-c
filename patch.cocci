@@ -51,7 +51,7 @@ F (...)
   E = E2;
 + sandbox_register_var(F, E, E, size);
 &
-  ALLOC(size);
+  ALLOC(size)
 )
 ...>
 }
@@ -67,7 +67,7 @@ F (...)
   E = E2;
 + sandbox_register_var(F, E, E, (n) * (size));
 &
-  calloc(n, size);
+  calloc(n, size)
 )
 ...>
 }
@@ -84,7 +84,7 @@ F (...)
   if (E = E2) S
 + sandbox_register_var(F, E, E, size);
 &
-  ALLOC(size);
+  ALLOC(size)
 )
 ...>
 }
@@ -101,8 +101,19 @@ F (...)
   if (E = E2) S
 + sandbox_register_var(F, E, E, (n) * (size));
 &
-  calloc(n, size);
+  calloc(n, size)
 )
+...>
+}
+
+@reg_strdup@
+identifier F;
+expression new, orig;
+@@
+F (...) {
+<...
+  new = strdup(orig);
++ sandbox_register_var(F, new, new, strlen(orig) + 1);
 ...>
 }
 
@@ -112,7 +123,7 @@ expression E;
 + sandbox_unregister_var(E);
   free(E);
 
-@chk_assign@
+@chk_assign depends on !reg_assign_c && !reg_assign_mre && !reg_if_c && !reg_if_mre && !reg_strdup@
 expression E, E1;
 assignment operator a;
 @@
@@ -126,20 +137,4 @@ expression E, size;
 
 + sandbox_check_access_n(E, size);
   fn(E, ..., size);
-
-@chk_strdup@
-identifier F;
-expression E;
-statement S;
-@@
-F (...) {
-<...
-(
-  S
-+ sandbox_register_var(F, E, E, strlen(E) + 1);
-&
-  strdup(E)
-);
-...>
-}
 
