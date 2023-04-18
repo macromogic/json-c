@@ -10,7 +10,7 @@ cmake_policy(SET CMP0048 NEW)
 
 # JSON-C library is C only project.
 # PROJECT_VERSION{,_MAJOR,_MINOR,_PATCH} set by project():
-project(json-c LANGUAGES C VERSION 0.16.99)
+project(json-c LANGUAGES C CXX VERSION 0.16.99)
 
 # Targets may not link directly to themselves.
 cmake_policy(SET CMP0038 NEW)
@@ -289,6 +289,12 @@ message(STATUS "Wrote ${PROJECT_BINARY_DIR}/config.h")
 configure_file(${PROJECT_SOURCE_DIR}/cmake/json_config.h.in   ${PROJECT_BINARY_DIR}/json_config.h)
 message(STATUS "Wrote ${PROJECT_BINARY_DIR}/json_config.h")
 
+if (USE_SANDBOX)
+    set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -DSANDBOX")
+endif()
+
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=c++11")
+
 if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections")
 	if ("${DISABLE_WERROR}" STREQUAL "OFF")
@@ -402,9 +408,10 @@ set(JSON_C_HEADERS
     ${PROJECT_SOURCE_DIR}/snprintf_compat.h
     ${PROJECT_SOURCE_DIR}/strdup_compat.h
     ${PROJECT_SOURCE_DIR}/vasprintf_compat.h
+    ${PROJECT_SOURCE_DIR}/sandbox.h
 )
 
-set(JSON_C_SOURCES
+set(ORIG_SOURCES
     ${PROJECT_SOURCE_DIR}/arraylist.c
     ${PROJECT_SOURCE_DIR}/debug.c
     ${PROJECT_SOURCE_DIR}/json_c_version.c
@@ -418,6 +425,38 @@ set(JSON_C_SOURCES
     ${PROJECT_SOURCE_DIR}/random_seed.c
     ${PROJECT_SOURCE_DIR}/strerror_override.c
 )
+
+set(JSON_C_SOURCES
+    ${PROJECT_SOURCE_DIR}/sandbox.cpp
+)
+
+execute_process(COMMAND spatch --version RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
+if(NOT result EQUAL 0)
+    message(FATAL_ERROR "spatch not found")
+endif()
+if(NOT EXISTS ${PROJECT_SOURCE_DIR}/patch.cocci)
+    message(FATAL_ERROR "patch.cocci not found")
+endif()
+
+foreach(ORIG_SRC ${ORIG_SOURCES})
+    get_filename_component(ORIG_SRC_NAME ${ORIG_SRC} NAME_WE)
+    message(STATUS "ORIG_SRC_NAME: ${ORIG_SRC_NAME}")
+    if(${ORIG_SRC_NAME} STREQUAL "linkhash")
+        add_custom_command(
+            OUTPUT ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c
+            COMMAND spatch --sp-file ${PROJECT_SOURCE_DIR}/patch.cocci ${ORIG_SRC} -o ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c
+            COMMAND sed -i -f ${PROJECT_SOURCE_DIR}/fixup.sed ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c
+            DEPENDS ${ORIG_SRC} ${PROJECT_SOURCE_DIR}/patch.cocci ${PROJECT_SOURCE_DIR}/fixup.sed
+        )
+    else()
+        add_custom_command(
+            OUTPUT ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c
+            COMMAND spatch --sp-file ${PROJECT_SOURCE_DIR}/patch.cocci ${ORIG_SRC} -o ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c
+            DEPENDS ${ORIG_SRC} ${PROJECT_SOURCE_DIR}/patch.cocci
+        )
+    endif()
+    list(APPEND JSON_C_SOURCES ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c)
+endforeach()
 
 if (NOT DISABLE_JSON_POINTER)
     set(JSON_C_PUBLIC_HEADERS   ${JSON_C_PUBLIC_HEADERS}  ${PROJECT_SOURCE_DIR}/json_pointer.h)
