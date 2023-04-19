@@ -43,12 +43,13 @@ F (...)
 @reg_assign_mre@
 identifier F, ALLOC=~"^malloc|realloc$";
 expression size, E, E2;
+assignment operator a;
 @@
 F (...)
 {
 <...
 (
-  E = E2;
+  E a E2;
 + sandbox_register_var(F, E, E, size);
 &
   ALLOC(..., size)
@@ -59,12 +60,13 @@ F (...)
 @reg_assign_c@
 identifier F;
 expression n, size, E, E2;
+assignment operator a;
 @@
 F (...)
 {
 <...
 (
-  E = E2;
+  E a E2;
 + sandbox_register_var(F, E, E, (n) * (size));
 &
   calloc(n, size)
@@ -76,12 +78,13 @@ F (...)
 identifier F, ALLOC=~"^malloc|realloc$";
 expression size, E, E2;
 statement S;
+assignment operator a;
 @@
 F (...)
 {
 <...
 (
-  if (E = E2) S
+  if (E a E2) S
 + sandbox_register_var(F, E, E, size);
 &
   ALLOC(size)
@@ -93,12 +96,13 @@ F (...)
 identifier F;
 expression n, size, E, E2;
 statement S;
+assignment operator a;
 @@
 F (...)
 {
 <...
 (
-  if (E = E2) S
+  if (E a E2) S
 + sandbox_register_var(F, E, E, (n) * (size));
 &
   calloc(n, size)
