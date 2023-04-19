@@ -1,0 +1,4 @@
+598a599,601
+> 		if (!(opts & JSON_C_OBJECT_KEY_IS_CONSTANT)) {
+> 			sandbox_register_var(json_object_object_add_ex, k, (void *)(uintptr_t)k, strlen(key) + 1);
+> 		}

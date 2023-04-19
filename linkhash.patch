@@ -1,0 +1,90 @@
+181,183c181,183
+< 	sandbox_check_access(&(a));
+< 	a -= c;  sandbox_check_access(&(a));
+< 	a ^= rot(c, 4);  sandbox_check_access(&(c));
+---
+> 	sandbox_check_access(&(a)); \
+> 	a -= c;  sandbox_check_access(&(a)); \
+> 	a ^= rot(c, 4);  sandbox_check_access(&(c)); \
+185,187c185,187
+< 	sandbox_check_access(&(b));
+< 	b -= a;  sandbox_check_access(&(b));
+< 	b ^= rot(a, 6);  sandbox_check_access(&(a));
+---
+> 	sandbox_check_access(&(b)); \
+> 	b -= a;  sandbox_check_access(&(b)); \
+> 	b ^= rot(a, 6);  sandbox_check_access(&(a)); \
+189,191c189,191
+< 	sandbox_check_access(&(c));
+< 	c -= b;  sandbox_check_access(&(c));
+< 	c ^= rot(b, 8);  sandbox_check_access(&(b));
+---
+> 	sandbox_check_access(&(c)); \
+> 	c -= b;  sandbox_check_access(&(c)); \
+> 	c ^= rot(b, 8);  sandbox_check_access(&(b)); \
+193,195c193,195
+< 	sandbox_check_access(&(a));
+< 	a -= c;  sandbox_check_access(&(a));
+< 	a ^= rot(c,16);  sandbox_check_access(&(c));
+---
+> 	sandbox_check_access(&(a)); \
+> 	a -= c;  sandbox_check_access(&(a)); \
+> 	a ^= rot(c,16);  sandbox_check_access(&(c)); \
+197,199c197,199
+< 	sandbox_check_access(&(b));
+< 	b -= a;  sandbox_check_access(&(b));
+< 	b ^= rot(a,19);  sandbox_check_access(&(a));
+---
+> 	sandbox_check_access(&(b)); \
+> 	b -= a;  sandbox_check_access(&(b)); \
+> 	b ^= rot(a,19);  sandbox_check_access(&(a)); \
+201,203c201,203
+< 	sandbox_check_access(&(c));
+< 	c -= b;  sandbox_check_access(&(c));
+< 	c ^= rot(b, 4);  sandbox_check_access(&(b));
+---
+> 	sandbox_check_access(&(c)); \
+> 	c -= b;  sandbox_check_access(&(c)); \
+> 	c ^= rot(b, 4);  sandbox_check_access(&(b)); \
+236,237c236,237
+< 	sandbox_check_access(&(c));
+< 	c ^= b; sandbox_check_access(&(c));
+---
+> 	sandbox_check_access(&(c)); \
+> 	c ^= b; sandbox_check_access(&(c)); \
+239,240c239,240
+< 	sandbox_check_access(&(a));
+< 	a ^= c; sandbox_check_access(&(a));
+---
+> 	sandbox_check_access(&(a)); \
+> 	a ^= c; sandbox_check_access(&(a)); \
+242,243c242,243
+< 	sandbox_check_access(&(b));
+< 	b ^= a; sandbox_check_access(&(b));
+---
+> 	sandbox_check_access(&(b)); \
+> 	b ^= a; sandbox_check_access(&(b)); \
+245,246c245,246
+< 	sandbox_check_access(&(c));
+< 	c ^= b; sandbox_check_access(&(c));
+---
+> 	sandbox_check_access(&(c)); \
+> 	c ^= b; sandbox_check_access(&(c)); \
+248,249c248,249
+< 	sandbox_check_access(&(a));
+< 	a ^= c; sandbox_check_access(&(a));
+---
+> 	sandbox_check_access(&(a)); \
+> 	a ^= c; sandbox_check_access(&(a)); \
+251,252c251,252
+< 	sandbox_check_access(&(b));
+< 	b ^= a; sandbox_check_access(&(b));
+---
+> 	sandbox_check_access(&(b)); \
+> 	b ^= a; sandbox_check_access(&(b)); \
+254,255c254,255
+< 	sandbox_check_access(&(c));
+< 	c ^= b; sandbox_check_access(&(c));
+---
+> 	sandbox_check_access(&(c)); \
+> 	c ^= b; sandbox_check_access(&(c)); \

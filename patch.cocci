@@ -127,7 +127,7 @@ expression E;
 + sandbox_unregister_var(E);
   free(E);
 
-@chk_assign depends on !reg_assign_c && !reg_assign_mre && !reg_if_c && !reg_if_mre && !reg_strdup@
+@chk_assign@
 expression E, E1;
 assignment operator a;
 @@

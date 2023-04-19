@@ -440,13 +440,12 @@ endif()
 
 foreach(ORIG_SRC ${ORIG_SOURCES})
     get_filename_component(ORIG_SRC_NAME ${ORIG_SRC} NAME_WE)
-    message(STATUS "ORIG_SRC_NAME: ${ORIG_SRC_NAME}")
-    if(${ORIG_SRC_NAME} STREQUAL "linkhash")
+    if(EXISTS ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patch)
         add_custom_command(
             OUTPUT ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c
             COMMAND spatch --sp-file ${PROJECT_SOURCE_DIR}/patch.cocci ${ORIG_SRC} -o ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c --allow-inconsistent-paths
-            COMMAND sed -i -f ${PROJECT_SOURCE_DIR}/fixup.sed ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c
-            DEPENDS ${ORIG_SRC} ${PROJECT_SOURCE_DIR}/patch.cocci ${PROJECT_SOURCE_DIR}/fixup.sed
+            COMMAND patch -i ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patch ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patched.c
+            DEPENDS ${ORIG_SRC} ${PROJECT_SOURCE_DIR}/patch.cocci ${PROJECT_SOURCE_DIR}/${ORIG_SRC_NAME}.patch
         )
     else()
         add_custom_command(
