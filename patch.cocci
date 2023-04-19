@@ -51,7 +51,7 @@ F (...)
   E = E2;
 + sandbox_register_var(F, E, E, size);
 &
-  ALLOC(size)
+  ALLOC(..., size)
 )
 ...>
 }
