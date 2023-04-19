@@ -27,14 +27,14 @@ F (...)
 {
 <...
 (
-  T x = (T1) malloc(size);
-+ sandbox_register_var(F, x, x, size);
+   T x = (T1) malloc(size);
+++ sandbox_register_var(F, x, x, size);
 |   
-  T x = (T1) realloc(..., size);
-+ sandbox_register_var(F, x, x, size);
+   T x = (T1) realloc(..., size);
+++ sandbox_register_var(F, x, x, size);
 |
-  T x = (T1) calloc(n, size);
-+ sandbox_register_var(F, x, x, (n) * (size));
+   T x = (T1) calloc(n, size);
+++ sandbox_register_var(F, x, x, (n) * (size));
 )
 
 ...>
@@ -77,33 +77,77 @@ F (...)
 @reg_if_mre@
 identifier F, ALLOC=~"^malloc|realloc$";
 expression size, E, E2;
-statement S;
-assignment operator a;
 @@
 F (...)
 {
 <...
 (
-  if (E a E2) S
-+ sandbox_register_var(F, E, E, size);
+  if (E = E2) {
++   sandbox_register_var(F, E, E, size);
+    ...
+  }
 &
-  ALLOC(size)
+  E2
+&
+  ALLOC(..., size)
+)
+...>
+}
+
+@reg_if_n_mre@
+identifier F, ALLOC=~"^malloc|realloc$";
+expression size, E, E1, E2;
+@@
+F (...)
+{
+<...
+(
+  if (E) {
+    ...
+  }
++ sandbox_register_var(F, E1, E1, size);
+&
+  !(E1 = E2)
+&
+  ALLOC(..., size)
 )
 ...>
 }
 
 @reg_if_c@
 identifier F;
-expression n, size, E, E2;
-statement S;
-assignment operator a;
+expression size, n, E, E2;
 @@
 F (...)
 {
 <...
 (
-  if (E a E2) S
-+ sandbox_register_var(F, E, E, (n) * (size));
+  if (E = E2) {
++   sandbox_register_var(F, E, E, (n) * (size));
+    ...
+  }
+&
+  E2
+&
+  calloc(n, size)
+)
+...>
+}
+
+@reg_if_n_c@
+identifier F;
+expression size, n, E, E1, E2;
+@@
+F (...)
+{
+<...
+(
+  if (E) {
+    ...
+  }
++ sandbox_register_var(F, E1, E1, (n) * (size));
+&
+  !(E1 = E2)
 &
   calloc(n, size)
 )
@@ -128,11 +172,16 @@ expression E;
   free(E);
 
 @chk_assign@
-expression E, E1;
+expression E2, E3;
+statement S;
 assignment operator a;
 @@
-+ sandbox_check_access(&(E));
-  E a E1;
+(
+++ sandbox_check_access(&(E2));
+   S
+&
+   E2 a E3
+)
 
 @chk_fn@
 identifier fn =~ "^(memset|memmove|memcpy|strcpy)$";
