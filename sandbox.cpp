@@ -173,7 +173,7 @@ void __sandbox_check_access(const char *subject, void *addr, size_t size)
         abort();
     }
 #else
-    assert((*perm_set)[subject].count(var.filename) > 0);
+    assert((*perm_set)[subject].count(var.varname) > 0);
     assert(addr_ >= var.addr && addr_ + size <= var.addr + var.size);
 #endif
 }
