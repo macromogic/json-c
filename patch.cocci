@@ -19,9 +19,9 @@
   #include "..."
 
 @reg_init@
-identifier F, x;
+identifier F, x, new;
 type T, T1;
-expression n, size;
+expression n, size, orig;
 @@
 F (...)
 {
@@ -35,6 +35,9 @@ F (...)
 |
    T x = (T1) calloc(n, size);
 ++ sandbox_register_var(F, x, x, (n) * (size));
+|
+   T new = (T1) strdup(orig);
+++ sandbox_register_var(F, new, new, strlen(orig) + 1);
 )
 
 ...>
