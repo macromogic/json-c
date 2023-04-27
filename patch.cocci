@@ -168,6 +168,22 @@ F (...) {
 ...>
 }
 
+@reg_sprintf@
+identifier F, P =~ "^v?asprintf$";
+expression ST;
+statement S;
+@@
+F (...) {
+<...
+(
+  S
++ sandbox_register_var(F, ST, ST, strlen(ST) + 1);
+&
+  P(&ST, ...)
+)
+...>
+}
+
 @unreg@
 expression E;
 @@
