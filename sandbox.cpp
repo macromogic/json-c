@@ -35,7 +35,7 @@ struct var_info {
 
     inline bool operator<(const var_info& rhs) const
     {
-        return varname < rhs.varname;
+        return addr < rhs.addr;
     }
 };
 

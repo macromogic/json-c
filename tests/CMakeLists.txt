@@ -45,6 +45,7 @@ foreach(TESTNAME ${ALL_TEST_NAMES})
 
 add_executable(${TESTNAME} ${TESTNAME}.c)
 add_test(NAME ${TESTNAME} COMMAND ${PROJECT_SOURCE_DIR}/tests/${TESTNAME}.test)
+set_property(TEST ${TESTNAME} PROPERTY ENVIRONMENT "SANDBOX=${SANDBOX}")
 
 # XXX using the non-target_ versions of these doesn't work :(
 target_include_directories(
